@@ -153,11 +153,14 @@ with tab_explore:
         weighted_mean = (
             float((filt_sum["mean_mhq"] * filt_sum["count"]).sum() / total_n) if total_n > 0 else np.nan
         )
+        weighted_median = (
+            float((filt_sum["median_mhq"] * filt_sum["count"]).sum() / total_n) if total_n > 0 else np.nan
+        )
 
         c1, c2, c3 = st.columns(3)
         c1.metric("Filtered Respondents", f"{total_n:,}")
         c2.metric("Mean MHQ Score", f"{weighted_mean:.2f}" if total_n > 0 else "N/A")
-        c3.metric("Study Average MHQ", f"{STUDY_MEAN_MHQ:.2f}")
+        c3.metric("Median MHQ Score", f"{weighted_median:.2f}" if total_n > 0 else "N/A")
 
         if not filt_bins.empty:
             hist_agg = filt_bins.groupby("bin_center", as_index=False)["count"].sum()
