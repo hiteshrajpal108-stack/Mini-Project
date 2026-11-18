@@ -112,12 +112,64 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "mhq_model.joblib")
 SUMMARY_PATH = os.path.join(BASE_DIR, "demographic_summary.csv")
 BINS_PATH = os.path.join(BASE_DIR, "mhq_bins.csv")
+INCOME_SUMMARY_PATH = os.path.join(BASE_DIR, "income_summary.csv")
 
 AGE_COL = "age"
 SEX_COL = "biological_sex"
 INCOME_COL = "income_household"
 STUDY_MEAN_MHQ = 67.65
 AGE_ORDER = ["18", "19", "20", "21-24", "25-34", "35-44", "45-54", "55-64", "65-74", "75-84", "85+"]
+
+INCOME_INR_OPTIONS = [
+    "Less than ₹1,00,000",
+    "₹1,00,001 – ₹3,00,000",
+    "₹3,00,001 – ₹5,00,000",
+    "₹5,00,001 – ₹10,00,000",
+    "₹10,00,001 – ₹20,00,000",
+    "₹20,00,001 – ₹40,00,000",
+    "₹40,00,001 – ₹85,00,000",
+    "₹85,00,001 – ₹2,10,00,000",
+    "More than ₹2,10,00,000",
+    "Prefer not to say",
+]
+
+INR_TO_MODEL_RAW = {
+    "Less than ₹1,00,000": "Less than INR 1|00|000",
+    "₹1,00,001 – ₹3,00,000": "1|00|001 – 3|00|000 INR",
+    "₹3,00,001 – ₹5,00,000": "3|00|001 – 5|00|000 INR",
+    "₹5,00,001 – ₹10,00,000": "5|00|001 – 10|00|000 INR",
+    "₹10,00,001 – ₹20,00,000": "10|00|001 – 20|00|000 INR",
+    "₹20,00,001 – ₹40,00,000": "20|00|001 – 40|00|000 INR",
+    "₹40,00,001 – ₹85,00,000": "More than 40|00|000 INR",
+    "₹85,00,001 – ₹2,10,00,000": "$100|001 -$250|000",
+    "More than ₹2,10,00,000": "More than $250|000",
+    "Prefer not to say": "Prefer not to say",
+}
+
+
+def map_raw_income_to_inr(val: str) -> str:
+    s = str(val).strip()
+    if s == "Unknown":
+        return "Unknown (Not Reported)"
+    if s in ("Less than INR 1|00|000", "Up to 3 minimum wages"):
+        return "INR < 1,00,000"
+    if s.startswith("1|00|001") or s == "3-10 minimum wages":
+        return "INR 1,00,001 - 3,00,000"
+    if s.startswith("3|00|001") or s == "10-20 minimum wages":
+        return "INR 3,00,001 - 5,00,000"
+    if s.startswith("5|00|001") or s == "20-30 minimum wages":
+        return "INR 5,00,001 - 10,00,000"
+    if s.startswith("10|00|001") or s in ("Under $20|000", "More than 30 minimum wages"):
+        return "INR 10,00,001 - 20,00,000"
+    if s.startswith("20|00|001") or s.startswith("$20|001"):
+        return "INR 20,00,001 - 40,00,000"
+    if s.startswith("More than 40|00|000") or s.startswith("$40|001") or s.startswith("$60|001") or s.startswith("$80|001"):
+        return "INR 40,00,001 - 85,00,000"
+    if s.startswith("$100 001") or s.startswith("$100|001"):
+        return "INR 85,00,001 - 2,10,00,000"
+    if s.startswith("More than $250"):
+        return "INR > 2,10,00,000"
+    return "Prefer not to say"
 
 
 @st.cache_resource
@@ -131,7 +183,8 @@ def load_model():
 def load_summaries():
     summary_df = pd.read_csv(SUMMARY_PATH) if os.path.exists(SUMMARY_PATH) else None
     bins_df = pd.read_csv(BINS_PATH) if os.path.exists(BINS_PATH) else None
-    return summary_df, bins_df
+    income_df = pd.read_csv(INCOME_SUMMARY_PATH) if os.path.exists(INCOME_SUMMARY_PATH) else None
+    return summary_df, bins_df, income_df
 
 
 def get_model_categories(model) -> tuple[list[str], list[str], list[str]]:
@@ -139,16 +192,16 @@ def get_model_categories(model) -> tuple[list[str], list[str], list[str]]:
     cats = onehot.categories_
     age_opts = sorted([str(c) for c in cats[0] if str(c) != "Unknown"])
     sex_opts = sorted([str(c) for c in cats[1] if str(c) != "Unknown"])
-    inc_opts = sorted([str(c) for c in cats[2] if str(c) != "Unknown"])
-    return age_opts, sex_opts, inc_opts
+    return age_opts, sex_opts, INCOME_INR_OPTIONS
 
 
-def predict_mhq(model, age: str, biological_sex: str, income: str) -> float:
+def predict_mhq(model, age: str, biological_sex: str, income_inr_label: str) -> float:
+    raw_income = INR_TO_MODEL_RAW.get(str(income_inr_label), str(income_inr_label))
     input_df = pd.DataFrame(
         {
             AGE_COL: [str(age)],
             SEX_COL: [str(biological_sex)],
-            INCOME_COL: [str(income)],
+            INCOME_COL: [raw_income],
         }
     )
     return float(model.predict(input_df)[0])
@@ -171,7 +224,7 @@ if model is None:
     st.error("`mhq_model.joblib` was not found in the app directory.")
     st.stop()
 
-summary_df, bins_df = load_summaries()
+summary_df, bins_df, income_df = load_summaries()
 age_options, sex_options, income_options = get_model_categories(model)
 
 # Vertical Sidebar Navigation Panel
@@ -224,7 +277,7 @@ if active == "prediction":
     with col2:
         selected_sex = st.selectbox("Biological Sex", sex_options, index=0)
     with col3:
-        selected_income = st.selectbox("Household Income", income_options, index=0)
+        selected_income = st.selectbox("Household Income (INR)", income_options, index=0)
 
     if st.button("Predict MHQ Score", type="primary"):
         pred = predict_mhq(model, selected_age, selected_sex, selected_income)
@@ -346,12 +399,38 @@ elif active == "explorer":
             st.pyplot(fig_sub)
             plt.close(fig_sub)
 
+        if income_df is not None and not income_df.empty:
+            fig_inc, ax_inc = plt.subplots(figsize=(9.5, 4.2))
+            sns.barplot(
+                data=income_df,
+                x="mean_mhq",
+                y="income_inr",
+                hue="income_inr",
+                palette="crest",
+                legend=False,
+                ax=ax_inc,
+            )
+            ax_inc.axvline(STUDY_MEAN_MHQ, color="#F59E0B", linestyle="--", linewidth=1.3, label=f"Study Mean ({STUDY_MEAN_MHQ:.1f})")
+            ax_inc.set_title("Mean Overall MHQ Score by Household Income (INR)")
+            ax_inc.set_xlabel("Mean Overall MHQ Score")
+            ax_inc.set_ylabel("Household Income (INR)")
+            ax_inc.legend()
+            plt.tight_layout()
+            st.pyplot(fig_inc)
+            plt.close(fig_inc)
+
 elif active == "model":
     st.subheader("📈 Feature Importance, Model Performance & Statistical Findings")
     all_features = model.named_steps["preprocessor"].get_feature_names_out()
-    clean_features = [name.replace("cat__", "") for name in all_features]
+    clean_features = []
+    for name in all_features:
+        c_name = name.replace("cat__", "")
+        if c_name.startswith("income_household_"):
+            raw_val = c_name.replace("income_household_", "")
+            c_name = "income_household_" + map_raw_income_to_inr(raw_val)
+        clean_features.append(c_name)
     importances = model.named_steps["regressor"].feature_importances_
-    feat_imp = pd.Series(importances, index=clean_features).sort_values(ascending=False).head(10)
+    feat_imp = pd.Series(importances, index=clean_features).groupby(level=0).sum().sort_values(ascending=False).head(10)
 
     m_col1, m_col2 = st.columns(2)
     with m_col1:
@@ -417,9 +496,10 @@ This study evaluates whether **age**, **biological sex**, and **household income
     for img_name, caption in [
         ("pipeline_architecture.png", "Figure 1: End-to-End MHQ Research & Deployment Architecture"),
         ("mhq_by_age_distribution.png", "Figure 2: Average Overall MHQ Score Across Age Groups"),
-        ("subscore_by_age_and_sex.png", "Figure 3: Mean Overall MHQ Score by Biological Sex & Sub-Score Trajectories Across Age"),
-        ("feature_importance.png", "Figure 4: Top 10 Demographic Predictors"),
-        ("subscore_predictability.png", "Figure 5: Model Predictability (R²) Across Overall MHQ and Domain Sub-Scores"),
+        ("mhq_by_income_inr.png", "Figure 3: Mean Overall MHQ Score by Household Income (INR)"),
+        ("subscore_by_age_and_sex.png", "Figure 4: Mean Overall MHQ Score by Biological Sex & Sub-Score Trajectories Across Age"),
+        ("feature_importance.png", "Figure 5: Top 10 Demographic Predictors (INR Normalized)"),
+        ("subscore_predictability.png", "Figure 6: Model Predictability (R²) Across Overall MHQ and Domain Sub-Scores"),
     ]:
         img_p = os.path.join(assets_dir, img_name)
         if os.path.exists(img_p):
