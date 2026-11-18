@@ -194,19 +194,18 @@ def load_summaries():
 
 
 def get_model_categories(model) -> tuple[list[str], list[str], list[str]]:
-    onehot = model.named_steps["preprocessor"].named_transformers_["cat"].named_steps["onehot"]
-    cats = onehot.categories_
-    age_opts = sorted([str(c) for c in cats[0] if str(c) != "Unknown"])
-    sex_opts = sorted([str(c) for c in cats[1] if str(c) != "Unknown"])
+    age_opts = AGE_ORDER
+    sex_opts = ["Female", "Male", "Other / Intersex", "Prefer not to say"]
     return age_opts, sex_opts, INCOME_INR_OPTIONS
 
 
 def predict_mhq(model, age: str, biological_sex: str, income_inr_label: str) -> float:
     raw_income = INR_TO_MODEL_RAW.get(str(income_inr_label), str(income_inr_label))
+    raw_sex = "Other/Intersex" if biological_sex == "Other / Intersex" else str(biological_sex)
     input_df = pd.DataFrame(
         {
             AGE_COL: [str(age)],
-            SEX_COL: [str(biological_sex)],
+            SEX_COL: [raw_sex],
             INCOME_COL: [raw_income],
         }
     )
@@ -334,8 +333,9 @@ elif active == "explorer":
             filt_sum = filt_sum[filt_sum["age"] == age_filter]
             filt_bins = filt_bins[filt_bins["age"] == age_filter]
         if sex_filter != "All":
-            filt_sum = filt_sum[filt_sum["biological_sex"] == sex_filter]
-            filt_bins = filt_bins[filt_bins["biological_sex"] == sex_filter]
+            raw_sex_f = ["Other/Intersex", "Other"] if sex_filter == "Other / Intersex" else ([sex_filter, "Männlich"] if sex_filter == "Male" else [sex_filter])
+            filt_sum = filt_sum[filt_sum["biological_sex"].isin(raw_sex_f)]
+            filt_bins = filt_bins[filt_bins["biological_sex"].isin(raw_sex_f)]
 
         total_n = int(filt_sum["count"].sum())
         weighted_mean = (
@@ -510,7 +510,7 @@ This study evaluates whether **age**, **biological sex**, and **household income
 
 ### Why Both Machine Learning & Statistical Tests?
 - **One-Way ANOVA** proved that average MHQ differences across **age** ($F = 3176.39$), **biological sex** ($F = 586.09$), and **household income** ($F = 66.07$) are mathematically real ($p < 0.0001$), not random chance.
-- **Chi-Square** ($\chi^2 = 1666.66$, $p < 0.0001$) confirmed that biological sex and household income are statistically associated in the survey.
+- **Chi-Square** ($\\chi^2 = 1666.66$, $p < 0.0001$) confirmed that biological sex and household income are statistically associated in the survey.
 - **Data Quality Fix:** The raw `gender` column was 100% empty (240,012 nulls); replacing it with `biological_sex` (239,995 valid entries) resolved all statistical and modeling errors.
 """
     )
