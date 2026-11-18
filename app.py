@@ -10,9 +10,87 @@ st.set_page_config(
     page_title="MHQ Mental Well-Being Predictor",
     page_icon="🧠",
     layout="wide",
+    initial_sidebar_state="expanded",
 )
 
 sns.set_theme(style="darkgrid")
+
+# Custom UI/UX styling: modern vertical sidebar nav buttons, glass cards, and crisp typography
+st.markdown(
+    """
+    <style>
+    /* Main background & header polish */
+    .stApp {
+        background: radial-gradient(circle at top right, #0f292e 0%, #0f172a 45%, #090d16 100%);
+    }
+    /* Sidebar vertical panel styling */
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #0b1320 0%, #0f172a 100%);
+        border-right: 1px solid rgba(20, 184, 166, 0.22);
+    }
+    /* Clickable vertical navigation buttons */
+    section[data-testid="stSidebar"] .stButton > button {
+        width: 100%;
+        text-align: left;
+        justify-content: flex-start;
+        padding: 0.72rem 1rem;
+        border-radius: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        background: rgba(30, 41, 59, 0.55);
+        color: #e2e8f0;
+        font-weight: 600;
+        font-size: 0.95rem;
+        transition: all 0.2s ease;
+        margin-bottom: 0.35rem;
+    }
+    section[data-testid="stSidebar"] .stButton > button:hover {
+        border-color: #14b8a6;
+        background: rgba(13, 148, 136, 0.18);
+        color: #5eead4;
+        transform: translateX(3px);
+    }
+    section[data-testid="stSidebar"] .stButton > button[kind="primary"] {
+        background: linear-gradient(90deg, #0d9488 0%, #14b8a6 100%);
+        border-color: #2dd4bf;
+        color: #ffffff;
+        box-shadow: 0 4px 16px rgba(20, 184, 166, 0.28);
+    }
+    /* Primary action buttons in main content */
+    .main .stButton > button[kind="primary"],
+    .main .stDownloadButton > button {
+        border-radius: 12px;
+        padding: 0.6rem 1.25rem;
+        font-weight: 600;
+        background: linear-gradient(90deg, #0d9488 0%, #0ea5e9 100%);
+        border: none;
+        color: #ffffff;
+        box-shadow: 0 4px 14px rgba(13, 148, 136, 0.32);
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+    .main .stButton > button[kind="primary"]:hover,
+    .main .stDownloadButton > button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(20, 184, 166, 0.45);
+    }
+    /* Metric cards */
+    div[data-testid="stMetric"] {
+        background: rgba(30, 41, 59, 0.6);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 14px;
+        padding: 14px 18px;
+        backdrop-filter: blur(8px);
+    }
+    .hero-banner {
+        padding: 18px 22px;
+        border-radius: 16px;
+        background: linear-gradient(120deg, rgba(13, 148, 136, 0.22), rgba(14, 165, 233, 0.12));
+        border: 1px solid rgba(45, 212, 191, 0.25);
+        margin-bottom: 20px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "mhq_model.joblib")
@@ -72,9 +150,6 @@ def mhq_category(score: float) -> str:
     return "Distressed"
 
 
-st.title("🧠 MHQ Research Dashboard & Well-Being Predictor")
-st.caption("Mental Health Questionnaire (MHQ) Study — 240,012 Respondents | Random Forest Pipeline")
-
 model = load_model()
 if model is None:
     st.error("`mhq_model.joblib` was not found in the app directory.")
@@ -83,12 +158,44 @@ if model is None:
 summary_df, bins_df = load_summaries()
 age_options, sex_options, income_options = get_model_categories(model)
 
-tab_pred, tab_explore, tab_model, tab_paper = st.tabs(
-    ["🎯 Live Prediction", "📊 Demographic Explorer", "📈 Model & Statistics", "📄 Research Paper"]
+# Vertical Sidebar Navigation Panel
+NAV_ITEMS = [
+    ("🎯 Live Prediction", "prediction"),
+    ("📊 Demographic Explorer", "explorer"),
+    ("📈 Model & Statistics", "model"),
+    ("📄 Research Paper", "paper"),
+]
+
+if "active_page" not in st.session_state:
+    st.session_state.active_page = "prediction"
+
+with st.sidebar:
+    st.markdown("## 🧠 MHQ Navigation")
+    st.caption("Select a workspace view")
+    for label, key in NAV_ITEMS:
+        btn_type = "primary" if st.session_state.active_page == key else "secondary"
+        if st.button(label, key=f"nav_{key}", type=btn_type, use_container_width=True):
+            st.session_state.active_page = key
+            st.rerun()
+
+    st.divider()
+    st.markdown("**Study Snapshot**")
+    st.caption("• 240,012 Respondents\n• 207 Survey Variables\n• Random Forest (`R² = 0.1348`)")
+
+st.markdown(
+    """
+    <div class="hero-banner">
+        <h1 style="margin:0;font-size:1.85rem;">🧠 MHQ Research Dashboard & Well-Being Predictor</h1>
+        <p style="margin:4px 0 0;color:#cbd5e1;">Mental Health Questionnaire (MHQ) Study — 240,012 Respondents | Random Forest Pipeline</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 
-with tab_pred:
-    st.subheader("Predict Overall MHQ Score")
+active = st.session_state.active_page
+
+if active == "prediction":
+    st.subheader("🎯 Predict Overall MHQ Score")
     col1, col2, col3 = st.columns(3)
 
     with col1:
@@ -107,7 +214,6 @@ with tab_pred:
         m2.metric("Well-Being Tier", mhq_category(pred))
         m3.metric("Study Average MHQ", f"{STUDY_MEAN_MHQ:.2f}")
 
-        # Visual position on the MHQ scale (-100 to 200)
         fig_scale, ax_scale = plt.subplots(figsize=(9, 1.8))
         tiers = [
             (-100, -50, "#DC2626", "Distressed"),
@@ -129,8 +235,8 @@ with tab_pred:
         st.pyplot(fig_scale)
         plt.close(fig_scale)
 
-with tab_explore:
-    st.subheader("MHQ Score Distribution & Demographic Trends")
+elif active == "explorer":
+    st.subheader("📊 MHQ Score Distribution & Demographic Trends")
     if summary_df is None or bins_df is None:
         st.info("Summary files (`demographic_summary.csv`, `mhq_bins.csv`) not found.")
     else:
@@ -175,7 +281,6 @@ with tab_explore:
             st.pyplot(fig_hist)
             plt.close(fig_hist)
 
-        # Graph 2 & 3: Age Group Mean & All 5 Well-Being Dimensions by Age
         age_grp = (
             summary_df[summary_df["age"].isin(AGE_ORDER)]
             .groupby("age", as_index=False)
@@ -220,8 +325,8 @@ with tab_explore:
             st.pyplot(fig_sub)
             plt.close(fig_sub)
 
-with tab_model:
-    st.subheader("Feature Importance, Model Performance & Statistical Findings")
+elif active == "model":
+    st.subheader("📈 Feature Importance, Model Performance & Statistical Findings")
     all_features = model.named_steps["preprocessor"].get_feature_names_out()
     clean_features = [name.replace("cat__", "") for name in all_features]
     importances = model.named_steps["regressor"].feature_importances_
@@ -270,8 +375,8 @@ with tab_model:
 """
     )
 
-with tab_paper:
-    st.subheader("Predicting Mental Health Questionnaire (MHQ) Scores from Demographic Factors")
+elif active == "paper":
+    st.subheader("📄 Predicting Mental Health Questionnaire (MHQ) Scores from Demographic Factors")
     st.caption("Refined Empirical Research Paper — 240,012 Survey Respondents | Random Forest Regression & Inferential Statistics")
     paper_html_path = os.path.join(BASE_DIR, "Research_Paper_Interactive.html")
     if os.path.exists(paper_html_path):
