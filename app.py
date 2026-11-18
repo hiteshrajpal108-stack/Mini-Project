@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import streamlit as st
+import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="MHQ Mental Well-Being Predictor",
@@ -179,8 +180,97 @@ with st.sidebar:
             st.rerun()
 
     st.divider()
+    enable_swarm = st.toggle("✨ Interactive Cursor Swarm", value=True)
+    st.divider()
     st.markdown("**Study Snapshot**")
     st.caption("• 240,012 Respondents\n• 207 Survey Variables\n• Random Forest (`R² = 0.1348`)")
+
+if enable_swarm:
+    components.html(
+        """
+        <script>
+        (function () {
+          const doc = window.parent.document;
+          const old = doc.getElementById('mhq-swarm-overlay');
+          if (old) old.remove();
+          const canvas = doc.createElement('canvas');
+          canvas.id = 'mhq-swarm-overlay';
+          Object.assign(canvas.style, {
+            position: 'fixed',
+            inset: '0',
+            width: '100vw',
+            height: '100vh',
+            pointerEvents: 'none',
+            zIndex: '99999'
+          });
+          doc.body.appendChild(canvas);
+          const ctx = canvas.getContext('2d');
+          function resize() {
+            canvas.width = window.parent.innerWidth;
+            canvas.height = window.parent.innerHeight;
+          }
+          resize();
+          window.parent.addEventListener('resize', resize);
+          const colors = ['#14b8a6', '#38bdf8', '#a78bfa', '#f472b6', '#f59e0b', '#34d399'];
+          const target = { x: canvas.width * 0.6, y: canvas.height * 0.4 };
+          doc.addEventListener('mousemove', (e) => { target.x = e.clientX; target.y = e.clientY; });
+          const agents = Array.from({ length: 14 }, (_, i) => ({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            vx: 0, vy: 0,
+            color: colors[i % colors.length],
+            offset: (i / 14) * Math.PI * 2
+          }));
+          doc.addEventListener('mousedown', () => {
+            agents.forEach(a => {
+              const ang = Math.random() * Math.PI * 2;
+              a.vx += Math.cos(ang) * 7;
+              a.vy += Math.sin(ang) * 7;
+            });
+          });
+          function drawCursor(x, y, angle, color) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(-10, 4);
+            ctx.lineTo(-7, 0);
+            ctx.lineTo(-10, -4);
+            ctx.closePath();
+            ctx.fillStyle = color;
+            ctx.globalAlpha = 0.78;
+            ctx.fill();
+            ctx.restore();
+          }
+          function tick(t) {
+            if (!doc.getElementById('mhq-swarm-overlay')) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            agents.forEach((a, idx) => {
+              const orbitX = target.x + Math.cos(t * 0.002 + a.offset) * (36 + (idx % 3) * 14);
+              const orbitY = target.y + Math.sin(t * 0.002 + a.offset) * (36 + (idx % 3) * 14);
+              a.vx = (a.vx + (orbitX - a.x) * 0.012) * 0.88;
+              a.vy = (a.vy + (orbitY - a.y) * 0.012) * 0.88;
+              a.x += a.vx;
+              a.y += a.vy;
+              const angle = Math.atan2(a.vy, a.vx);
+              drawCursor(a.x, a.y, angle, a.color);
+            });
+            window.parent.requestAnimationFrame(tick);
+          }
+          window.parent.requestAnimationFrame(tick);
+        })();
+        </script>
+        """,
+        height=0,
+        width=0,
+    )
+else:
+    components.html(
+        """<script>const el = window.parent.document.getElementById('mhq-swarm-overlay'); if (el) el.remove();</script>""",
+        height=0,
+        width=0,
+    )
 
 st.markdown(
     """
