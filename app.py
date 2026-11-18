@@ -277,9 +277,9 @@ with tab_paper:
     if os.path.exists(paper_html_path):
         with open(paper_html_path, "rb") as pf:
             st.download_button(
-                label="⬇️ Download Interactive Research Paper (HTML)",
+                label="⬇️ Download Research Paper",
                 data=pf.read(),
-                file_name="Research_Paper_Interactive.html",
+                file_name="research_paper.html",
                 mime="text/html",
             )
     st.markdown(
