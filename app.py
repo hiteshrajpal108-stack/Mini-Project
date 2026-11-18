@@ -496,10 +496,34 @@ elif active == "paper":
             )
     st.markdown(
         """
-### Abstract
-This study evaluates whether **age**, **biological sex**, and **household income** predict an individual's **Overall MHQ Score**. The model achieved **R² = 0.1348** and **RMSE = 67.24**, with **age** emerging as the dominant predictor and **Cognition** (`R² = 0.1356`) as the most predictable sub-score.
+### Abstract (In Plain English)
+This study evaluates whether **age**, **biological sex**, and **household income** can predict an individual's **Overall MHQ Score** across **240,012 survey respondents** and **207 variables**. The Random Forest model achieved **R² = 0.1348** and **RMSE = 67.24**, meaning demographic factors explain about **13.5%** of the variation in mental well-being—with **age** as the strongest driver and **Cognition** (`R² = 0.1356`) as the most predictable domain. The remaining ~86.5% depends on personal life experiences, sleep, social support, and clinical factors, so this model is designed for **population screening and research**, not medical diagnosis.
+
+### Understanding the MHQ Score Scale (−100 to +200)
+| Score Range | Tier | Everyday Meaning |
+| :--- | :--- | :--- |
+| **100 to 200** | Thriving | Strong emotional resilience, clarity, and life satisfaction |
+| **50 to 99** | Succeeding | Functioning well across work, relationships, and mood |
+| **0 to 49** | Managing / Enduring | Coping with daily life with occasional stress or fatigue |
+| **−50 to −1** | Struggling | Noticeable distress affecting daily mood or focus |
+| **−100 to −51** | Distressed | Severe symptoms; professional support recommended |
+
+### Why Both Machine Learning & Statistical Tests?
+- **One-Way ANOVA** proved that average MHQ differences across **age** ($F = 3176.39$), **biological sex** ($F = 586.09$), and **household income** ($F = 66.07$) are mathematically real ($p < 0.0001$), not random chance.
+- **Chi-Square** ($\chi^2 = 1666.66$, $p < 0.0001$) confirmed that biological sex and household income are statistically associated in the survey.
+- **Data Quality Fix:** The raw `gender` column was 100% empty (240,012 nulls); replacing it with `biological_sex` (239,995 valid entries) resolved all statistical and modeling errors.
 """
     )
+    with st.expander("📖 Plain-English Glossary of Technical Terms"):
+        st.markdown(
+            """
+- **Random Forest:** An ensemble of 100 decision trees that average their predictions for stable accuracy.
+- **R² (0.1348):** The percentage of variation in MHQ scores explained by demographic inputs (13.48%).
+- **RMSE (67.24):** Average prediction error in MHQ score points on the 300-point scale.
+- **One-Hot Encoding:** Converting text categories (like `"Female"`, `"55-64"`) into 0/1 numeric columns.
+- **SimpleImputer:** Filling missing values with `"Unknown"` so the model never crashes on blank fields.
+"""
+        )
     assets_dir = os.path.join(BASE_DIR, "assets")
     for img_name, caption in [
         ("pipeline_architecture.png", "Figure 1: End-to-End MHQ Research & Deployment Architecture"),
