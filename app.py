@@ -20,9 +20,11 @@ sns.set_theme(style="darkgrid")
 st.markdown(
     """
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
     /* Main background & header polish */
     .stApp {
         background: radial-gradient(circle at top right, #0f292e 0%, #0f172a 45%, #090d16 100%);
+        font-family: 'Plus Jakarta Sans', sans-serif;
     }
     /* Sidebar vertical panel styling */
     section[data-testid="stSidebar"] {
@@ -82,11 +84,24 @@ st.markdown(
         backdrop-filter: blur(8px);
     }
     .hero-banner {
-        padding: 18px 22px;
-        border-radius: 16px;
-        background: linear-gradient(120deg, rgba(13, 148, 136, 0.22), rgba(14, 165, 233, 0.12));
-        border: 1px solid rgba(45, 212, 191, 0.25);
-        margin-bottom: 20px;
+        padding: 26px 28px;
+        border-radius: 18px;
+        background: linear-gradient(120deg, rgba(13, 148, 136, 0.22), rgba(14, 165, 233, 0.14), rgba(167, 139, 250, 0.10));
+        border: 1px solid rgba(45, 212, 191, 0.30);
+        margin-bottom: 24px;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    }
+    .hero-title {
+        font-family: 'Syne', sans-serif !important;
+        font-weight: 800 !important;
+        font-size: 2.25rem !important;
+        letter-spacing: -0.02em;
+        margin: 0;
+        background: linear-gradient(90deg, #5eead4 0%, #38bdf8 50%, #c4b5fd 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-align: center;
     }
     </style>
     """,
@@ -192,7 +207,7 @@ with st.sidebar:
 st.markdown(
     """
     <div class="hero-banner">
-        <h1 style="margin:0;font-size:1.85rem;">🧠 MHQ Research Dashboard & Well-Being Predictor</h1>
+        <h1 class="hero-title">🧠 MHQ Research Dashboard &amp; Well-Being Predictor</h1>
     </div>
     """,
     unsafe_allow_html=True,
@@ -446,17 +461,12 @@ if enable_swarm:
           resize();
           win.addEventListener('resize', resize);
 
-          const colors = ['#14b8a6', '#38bdf8', '#a78bfa', '#f472b6', '#f59e0b', '#34d399'];
-          const names = ['builder-01', 'ui-agent', 'layout-bot', 'type-spec', 'grid-snap', 'viz-node', 'dom-trace', 'align-x'];
-          const mouse = {{ x: canvas.width * 0.55, y: canvas.height * 0.35 }};
-          doc.addEventListener('mousemove', (e) => {{ mouse.x = e.clientX; mouse.y = e.clientY; }});
-
+          const colors = ['#14b8a6', '#38bdf8', '#a78bfa', '#34d399'];
           let speedMult = 1;
-          let mode = (win.__mhqLastRebuildKey === currentKey) ? 'flock' : 'rebuild';
+          let active = (win.__mhqLastRebuildKey !== currentKey);
           win.__mhqLastRebuildKey = currentKey;
 
-          // Collect visible DOM blocks to choreograph the page rebuild
-          const selector = '.hero-banner, div[data-testid="stMetric"], .stSelectbox, .stButton, .stDownloadButton, div[data-testid="stImage"], div[data-testid="stMarkdownContainer"] h2, div[data-testid="stMarkdownContainer"] h3, .stPlotlyChart, div[data-testid="stPyplot"]';
+          const selector = '.hero-banner, div[data-testid="stMetric"], .stSelectbox, .stButton, .stDownloadButton, div[data-testid="stImage"], div[data-testid="stMarkdownContainer"] h2, div[data-testid="stMarkdownContainer"] h3, div[data-testid="stPyplot"]';
           let targets = [];
           function startRebuild() {{
             const rawEls = Array.from(doc.querySelectorAll(selector)).filter(el => {{
@@ -464,24 +474,24 @@ if enable_swarm:
               return r.width > 30 && r.height > 16 && r.bottom > 0 && r.top < win.innerHeight;
             }});
             targets = rawEls.map((el, idx) => {{
-              el.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
-              el.style.opacity = '0.04';
-              el.style.transform = 'scale(0.985)';
+              el.style.transition = 'opacity 0.22s ease, transform 0.22s ease';
+              el.style.opacity = '0.06';
+              el.style.transform = 'translateY(8px) scale(0.985)';
               return {{
                 el,
                 progress: 0,
+                delay: idx * 0.08,
                 done: false,
-                assigned: idx % 10
+                color: colors[idx % colors.length]
               }};
             }});
-            mode = targets.length > 0 ? 'rebuild' : 'flock';
+            active = targets.length > 0;
           }}
 
-          if (mode === 'rebuild') {{
-            setTimeout(startRebuild, 60);
+          if (active) {{
+            setTimeout(startRebuild, 40);
           }}
 
-          // Floating Swarm Control Pill (bottom-right)
           const bar = doc.createElement('div');
           bar.id = 'mhq-swarm-toolbar';
           Object.assign(bar.style, {{
@@ -503,10 +513,9 @@ if enable_swarm:
             color: '#e2e8f0'
           }});
           bar.innerHTML = `
-            <span style="color:#2dd4bf;font-weight:700;">✦ Swarm Rebuild</span>
+            <span style="color:#2dd4bf;font-weight:700;">✦ Page Rebuild</span>
             <button id="mhq-swarm-replay" style="background:#0d9488;color:#fff;border:none;border-radius:999px;padding:4px 10px;cursor:pointer;font-weight:600;font-size:11px;">Replay</button>
             <button id="mhq-swarm-speed" style="background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:999px;padding:4px 9px;cursor:pointer;font-weight:600;font-size:11px;">1×</button>
-            <button id="mhq-swarm-live" style="background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:999px;padding:4px 9px;cursor:pointer;font-weight:600;font-size:11px;">Go Live</button>
           `;
           doc.body.appendChild(bar);
 
@@ -515,145 +524,40 @@ if enable_swarm:
             speedMult = speedMult === 1 ? 2 : (speedMult === 2 ? 3 : 1);
             e.target.textContent = speedMult + '×';
           }};
-          bar.querySelector('#mhq-swarm-live').onclick = () => {{
-            targets.forEach(t => {{
-              t.done = true;
-              t.el.style.opacity = '1';
-              t.el.style.transform = 'none';
-            }});
-            mode = 'flock';
-          }};
 
-          const agents = Array.from({{ length: 10 }}, (_, i) => ({{
-            x: canvas.width * 0.5 + (Math.random() - 0.5) * 160,
-            y: canvas.height * 0.3 + (Math.random() - 0.5) * 160,
-            vx: 0,
-            vy: 0,
-            color: colors[i % colors.length],
-            name: names[i % names.length],
-            offset: (i / 10) * Math.PI * 2
-          }}));
-
-          doc.addEventListener('mousedown', () => {{
-            agents.forEach(a => {{
-              const ang = Math.random() * Math.PI * 2;
-              a.vx += Math.cos(ang) * 8;
-              a.vy += Math.sin(ang) * 8;
-            }});
-          }});
-
-          function drawRulers() {{
-            ctx.save();
-            ctx.fillStyle = 'rgba(15, 23, 42, 0.72)';
-            ctx.fillRect(0, 0, canvas.width, 18);
-            ctx.fillRect(0, 0, 18, canvas.height);
-            ctx.strokeStyle = 'rgba(45, 212, 191, 0.35)';
-            ctx.lineWidth = 1;
-            for (let x = 50; x < canvas.width; x += 50) {{
-              ctx.beginPath();
-              ctx.moveTo(x, 12);
-              ctx.lineTo(x, 18);
-              ctx.stroke();
-            }}
-            for (let y = 50; y < canvas.height; y += 50) {{
-              ctx.beginPath();
-              ctx.moveTo(12, y);
-              ctx.lineTo(18, y);
-              ctx.stroke();
-            }}
-            ctx.restore();
-          }}
-
-          function drawCursorWithTag(x, y, color, label) {{
-            ctx.save();
-            ctx.translate(x, y);
-            // Pointer arrow
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(0, 14);
-            ctx.lineTo(4, 10);
-            ctx.lineTo(10, 12);
-            ctx.closePath();
-            ctx.fillStyle = color;
-            ctx.fill();
-            ctx.strokeStyle = '#0f172a';
-            ctx.lineWidth = 1;
-            ctx.stroke();
-
-            // Tag pill
-            ctx.font = '600 10px sans-serif';
-            const tw = ctx.measureText(label).width + 8;
-            ctx.fillStyle = color;
-            ctx.beginPath();
-            ctx.roundRect(10, 10, tw, 15, 4);
-            ctx.fill();
-            ctx.fillStyle = '#090d16';
-            ctx.fillText(label, 14, 21);
-            ctx.restore();
-          }}
-
-          function tick(t) {{
+          function tick() {{
             if (!doc.getElementById('mhq-swarm-overlay')) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            const pending = targets.filter(item => !item.done);
-            if (mode === 'rebuild' && pending.length > 0) {{
-              drawRulers();
-              agents.forEach((a, idx) => {{
-                const job = pending[idx % pending.length];
+            if (active && targets.length > 0) {{
+              let remaining = 0;
+              targets.forEach((job) => {{
+                if (job.done) return;
+                remaining++;
+                if (job.delay > 0) {{
+                  job.delay -= 0.04 * speedMult;
+                  return;
+                }}
                 const r = job.el.getBoundingClientRect();
                 const curW = r.width * Math.min(1, job.progress);
                 const curH = r.height * Math.min(1, job.progress);
-                const tx = r.left + curW;
-                const ty = r.top + curH;
 
-                a.vx = (a.vx + (tx - a.x) * 0.14) * 0.72;
-                a.vy = (a.vy + (ty - a.y) * 0.14) * 0.72;
-                a.x += a.vx;
-                a.y += a.vy;
-
-                // Draw wireframe blueprint box + W x H badge
                 ctx.save();
-                ctx.strokeStyle = a.color;
-                ctx.lineWidth = 1.4;
-                ctx.setLineDash([4, 3]);
+                ctx.strokeStyle = job.color;
+                ctx.lineWidth = 1.6;
+                ctx.setLineDash([5, 3]);
                 ctx.strokeRect(r.left, r.top, curW, curH);
                 ctx.setLineDash([]);
-
-                // Red alignment guide line
-                ctx.strokeStyle = 'rgba(244, 63, 94, 0.35)';
-                ctx.beginPath();
-                ctx.moveTo(0, r.top);
-                ctx.lineTo(canvas.width, r.top);
-                ctx.stroke();
-
-                const dimText = Math.round(curW) + ' × ' + Math.round(curH);
-                ctx.font = '600 10px monospace';
-                ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-                ctx.fillRect(r.left + 4, r.top + 4, ctx.measureText(dimText).width + 8, 15);
-                ctx.fillStyle = '#5eead4';
-                ctx.fillText(dimText, r.left + 8, r.top + 15);
                 ctx.restore();
 
-                job.progress += 0.012 * speedMult;
+                job.progress += 0.075 * speedMult;
                 if (job.progress >= 1) {{
                   job.done = true;
                   job.el.style.opacity = '1';
                   job.el.style.transform = 'none';
                 }}
-                drawCursorWithTag(a.x, a.y, a.color, a.name);
               }});
-            }} else {{
-              mode = 'flock';
-              agents.forEach((a, idx) => {{
-                const orbitX = mouse.x + Math.cos(t * 0.0022 + a.offset) * (42 + (idx % 3) * 16);
-                const orbitY = mouse.y + Math.sin(t * 0.0022 + a.offset) * (42 + (idx % 3) * 16);
-                a.vx = (a.vx + (orbitX - a.x) * 0.015) * 0.86;
-                a.vy = (a.vy + (orbitY - a.y) * 0.015) * 0.86;
-                a.x += a.vx;
-                a.y += a.vy;
-                drawCursorWithTag(a.x, a.y, a.color, a.name);
-              }});
+              if (remaining === 0) active = false;
             }}
             win.requestAnimationFrame(tick);
           }}
