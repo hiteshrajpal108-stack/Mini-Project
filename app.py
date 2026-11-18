@@ -83,8 +83,8 @@ if model is None:
 summary_df, bins_df = load_summaries()
 age_options, sex_options, income_options = get_model_categories(model)
 
-tab_pred, tab_explore, tab_model = st.tabs(
-    ["🎯 Live Prediction", "📊 Demographic Explorer", "📈 Model & Statistics"]
+tab_pred, tab_explore, tab_model, tab_paper = st.tabs(
+    ["🎯 Live Prediction", "📊 Demographic Explorer", "📈 Model & Statistics", "📄 Research Paper"]
 )
 
 with tab_pred:
@@ -269,3 +269,33 @@ with tab_model:
 - **Chi-Square (`biological_sex` vs. `income_household`):** $\\chi^2 = 1666.66$, $\\text{DoF} = 60$, $p = 7.26 \\times 10^{-309}$ (Significant)
 """
     )
+
+with tab_paper:
+    st.subheader("Predicting Mental Health Questionnaire (MHQ) Scores from Demographic Factors")
+    st.caption("Refined Empirical Research Paper — 240,012 Survey Respondents | Random Forest Regression & Inferential Statistics")
+    paper_html_path = os.path.join(BASE_DIR, "Research_Paper_Interactive.html")
+    if os.path.exists(paper_html_path):
+        with open(paper_html_path, "rb") as pf:
+            st.download_button(
+                label="⬇️ Download Interactive Research Paper (HTML)",
+                data=pf.read(),
+                file_name="Research_Paper_Interactive.html",
+                mime="text/html",
+            )
+    st.markdown(
+        """
+### Abstract
+This study evaluates whether **age**, **biological sex**, and **household income** predict an individual's **Overall MHQ Score** across **240,012 respondents** and **207 variables**. A Scikit-Learn Random Forest pipeline (`SimpleImputer` → `OneHotEncoder` → 100-tree `RandomForestRegressor`, `max_depth=10`, `random_state=42`) achieved **R² = 0.1348** and **RMSE = 67.24**, with **age** emerging as the dominant predictor and **Cognition** (`R² = 0.1356`) as the most predictable sub-score.
+"""
+    )
+    assets_dir = os.path.join(BASE_DIR, "assets")
+    for img_name, caption in [
+        ("pipeline_architecture.png", "Figure 1: End-to-End MHQ Research & Deployment Pipeline Architecture"),
+        ("mhq_by_age_distribution.png", "Figure 2: Average Overall MHQ Score Across Age Groups (n = 240,004)"),
+        ("subscore_by_age_and_sex.png", "Figure 3: Mean Overall MHQ Score by Biological Sex & Sub-Score Trajectories Across Age"),
+        ("feature_importance.png", "Figure 4: Top 10 Demographic Predictors (Random Forest Gini Importance)"),
+        ("subscore_predictability.png", "Figure 5: Model Predictability (R²) Across Overall MHQ and Domain Sub-Scores"),
+    ]:
+        img_p = os.path.join(assets_dir, img_name)
+        if os.path.exists(img_p):
+            st.image(img_p, caption=caption, use_container_width=True)
