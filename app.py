@@ -84,24 +84,30 @@ st.markdown(
         backdrop-filter: blur(8px);
     }
     .hero-banner {
-        padding: 26px 28px;
+        padding: 28px 32px;
         border-radius: 18px;
         background: linear-gradient(120deg, rgba(13, 148, 136, 0.22), rgba(14, 165, 233, 0.14), rgba(167, 139, 250, 0.10));
         border: 1px solid rgba(45, 212, 191, 0.30);
-        margin-bottom: 24px;
+        margin-bottom: 42px;
         text-align: center;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
     }
     .hero-title {
         font-family: 'Syne', sans-serif !important;
         font-weight: 800 !important;
-        font-size: 2.25rem !important;
+        font-size: 2.15rem !important;
+        line-height: 1.3 !important;
         letter-spacing: -0.02em;
         margin: 0;
+        text-align: center;
+    }
+    .hero-gradient {
         background: linear-gradient(90deg, #5eead4 0%, #38bdf8 50%, #c4b5fd 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        text-align: center;
+    }
+    .section-spacer {
+        height: 22px;
     }
     </style>
     """,
@@ -260,7 +266,7 @@ with st.sidebar:
 st.markdown(
     """
     <div class="hero-banner">
-        <h1 class="hero-title">🧠 MHQ Research Dashboard &amp; Well-Being Predictor</h1>
+        <div class="hero-title">🧠 <span class="hero-gradient">MHQ Research &amp; Well-Being Dashboard</span></div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -270,6 +276,7 @@ active = st.session_state.active_page
 
 if active == "prediction":
     st.subheader("🎯 Predict Overall MHQ Score")
+    st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns(3)
 
     with col1:
@@ -279,6 +286,7 @@ if active == "prediction":
     with col3:
         selected_income = st.selectbox("Household Income (INR)", income_options, index=0)
 
+    st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
     if st.button("Predict MHQ Score", type="primary"):
         pred = predict_mhq(model, selected_age, selected_sex, selected_income)
         delta = pred - STUDY_MEAN_MHQ
