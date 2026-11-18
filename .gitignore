@@ -1,0 +1,6 @@
+# Ignore large raw dataset (>100 MB GitHub file limit) and system/cache files
+your_file.csv
+__pycache__/
+*.pyc
+.DS_Store
+.ipynb_checkpoints/
