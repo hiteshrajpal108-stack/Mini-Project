@@ -215,13 +215,13 @@ def load_summaries():
 
 def get_model_categories(model) -> tuple[list[str], list[str], list[str]]:
     age_opts = AGE_ORDER
-    sex_opts = ["Female", "Male", "Other / Intersex", "Prefer not to say"]
+    sex_opts = ["Female", "Male", "Prefer not to say"]
     return age_opts, sex_opts, INCOME_INR_OPTIONS
 
 
 def predict_mhq(model, age: str, biological_sex: str, income_inr_label: str) -> float:
     raw_income = INR_TO_MODEL_RAW.get(str(income_inr_label), str(income_inr_label))
-    raw_sex = "Other/Intersex" if biological_sex == "Other / Intersex" else str(biological_sex)
+    raw_sex = str(biological_sex)
     input_df = pd.DataFrame(
         {
             AGE_COL: [str(age)],
@@ -400,7 +400,7 @@ elif active == "explorer":
             filt_sum = filt_sum[filt_sum["age"] == age_filter]
             filt_bins = filt_bins[filt_bins["age"] == age_filter]
         if sex_filter != "All":
-            raw_sex_f = ["Other/Intersex", "Other"] if sex_filter == "Other / Intersex" else ([sex_filter, "Männlich"] if sex_filter == "Male" else [sex_filter])
+            raw_sex_f = [sex_filter, "Männlich"] if sex_filter == "Male" else [sex_filter]
             filt_sum = filt_sum[filt_sum["biological_sex"].isin(raw_sex_f)]
             filt_bins = filt_bins[filt_bins["biological_sex"].isin(raw_sex_f)]
 
