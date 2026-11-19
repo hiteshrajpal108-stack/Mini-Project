@@ -1,9 +1,9 @@
 import os
 import joblib
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
+import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 import streamlit.components.v1 as components
 
@@ -14,7 +14,13 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-sns.set_theme(style="darkgrid")
+PLOTLY_LAYOUT = dict(
+    template="plotly_dark",
+    paper_bgcolor="rgba(0,0,0,0)",
+    plot_bgcolor="rgba(15,23,42,0.45)",
+    font=dict(family="Plus Jakarta Sans, sans-serif", color="#e2e8f0"),
+    margin=dict(l=20, r=20, t=48, b=20),
+)
 
 # Custom UI/UX styling: modern vertical sidebar nav buttons, glass cards, and crisp typography
 st.markdown(
@@ -373,39 +379,34 @@ if active == "prediction":
         g_col, a_col = st.columns([1.6, 1.0])
 
         with g_col:
-            from matplotlib.patches import Wedge
-            fig_gauge, ax_gauge = plt.subplots(figsize=(6.8, 3.4))
-            ax_gauge.set_xlim(-1.2, 1.2)
-            ax_gauge.set_ylim(-0.15, 1.2)
-            ax_gauge.set_aspect("equal")
-            ax_gauge.axis("off")
-            fig_gauge.patch.set_alpha(0.0)
-            ax_gauge.patch.set_alpha(0.0)
-
-            tiers = [
-                (-100, -50, "#DC2626"),
-                (-50, 0, "#F97316"),
-                (0, 50, "#EAB308"),
-                (50, 100, "#22C55E"),
-                (100, 200, "#0D9488"),
-            ]
-            for start, end, color in tiers:
-                t1 = 180 - ((end + 100) / 300) * 180
-                t2 = 180 - ((start + 100) / 300) * 180
-                ax_gauge.add_patch(Wedge((0, 0), 1.0, t1, t2, width=0.28, facecolor=color, edgecolor="#0f172a", linewidth=1.5))
-
-            clamped = max(-100.0, min(200.0, pred))
-            ang = np.deg2rad(180 - ((clamped + 100) / 300) * 180)
-            ax_gauge.plot([0, 0.82 * np.cos(ang)], [0, 0.82 * np.sin(ang)], color="#f8fafc", linewidth=3.2, zorder=5)
-            ax_gauge.scatter([0], [0], color="#14b8a6", s=110, zorder=6, edgecolor="#f8fafc", linewidth=1.5)
-            ax_gauge.text(0, 0.34, f"{pred:.1f}", ha="center", va="center", fontsize=22, fontweight="bold", color="#f8fafc")
-            ax_gauge.text(0, 0.14, tier, ha="center", va="center", fontsize=11, color="#5eead4", fontweight="bold")
-            ax_gauge.text(-1.02, -0.08, "-100", ha="center", fontsize=9, color="#94a3b8")
-            ax_gauge.text(0, 1.08, "50", ha="center", fontsize=9, color="#94a3b8")
-            ax_gauge.text(1.02, -0.08, "200", ha="center", fontsize=9, color="#94a3b8")
-            plt.tight_layout()
-            st.pyplot(fig_gauge)
-            plt.close(fig_gauge)
+            fig_gauge = go.Figure(
+                go.Indicator(
+                    mode="gauge+number+delta",
+                    value=pred,
+                    delta={"reference": STUDY_MEAN_MHQ, "valueformat": ".1f"},
+                    number={"valueformat": ".1f", "font": {"size": 42, "color": "#f8fafc"}},
+                    title={"text": f"Predicted MHQ Score · {tier}", "font": {"size": 16, "color": "#5eead4"}},
+                    gauge={
+                        "axis": {"range": [-100, 200], "tickcolor": "#94a3b8"},
+                        "bar": {"color": "#14b8a6", "thickness": 0.3},
+                        "bgcolor": "rgba(15,23,42,0.5)",
+                        "steps": [
+                            {"range": [-100, -50], "color": "rgba(220,38,38,0.55)"},
+                            {"range": [-50, 0], "color": "rgba(249,115,22,0.55)"},
+                            {"range": [0, 50], "color": "rgba(234,179,8,0.55)"},
+                            {"range": [50, 100], "color": "rgba(34,197,94,0.55)"},
+                            {"range": [100, 200], "color": "rgba(13,148,136,0.55)"},
+                        ],
+                        "threshold": {
+                            "line": {"color": "#f59e0b", "width": 3},
+                            "thickness": 0.85,
+                            "value": STUDY_MEAN_MHQ,
+                        },
+                    },
+                )
+            )
+            fig_gauge.update_layout(**PLOTLY_LAYOUT, height=320)
+            st.plotly_chart(fig_gauge, use_container_width=True)
 
         with a_col:
             if pred >= 100:
@@ -444,22 +445,28 @@ if active == "prediction":
         cm2.metric("Profile B Predicted MHQ", f"{score_b:.2f}", mhq_category(score_b))
         cm3.metric("Difference (B − A)", f"{diff_ba:+.2f} pts", "Profile B Higher" if diff_ba >= 0 else "Profile A Higher")
 
-        fig_cmp, ax_cmp = plt.subplots(figsize=(8.5, 2.8))
-        labels = [f"Profile A ({age_a}, {sex_a})", f"Profile B ({age_b}, {sex_b})", "Study Average"]
-        vals = [score_a, score_b, STUDY_MEAN_MHQ]
-        bar_colors = ["#38bdf8", "#14b8a6", "#f59e0b"]
-        bars = ax_cmp.barh(labels, vals, color=bar_colors, height=0.52)
-        for bar, v in zip(bars, vals):
-            offset = 3 if v >= 0 else -3
-            ha = "left" if v >= 0 else "right"
-            ax_cmp.text(v + offset, bar.get_y() + bar.get_height() / 2, f"{v:.1f}", va="center", ha=ha, fontweight="bold")
-        ax_cmp.axvline(0, color="#64748b", linewidth=1)
-        ax_cmp.set_xlim(-100, 200)
-        ax_cmp.set_xlabel("Predicted Overall MHQ Score (-100 to 200)")
-        ax_cmp.set_title("Side-by-Side MHQ Score Comparison")
-        plt.tight_layout()
-        st.pyplot(fig_cmp)
-        plt.close(fig_cmp)
+        cmp_df = pd.DataFrame(
+            {
+                "Profile": [f"Profile A ({age_a}, {sex_a})", f"Profile B ({age_b}, {sex_b})", "Study Average"],
+                "MHQ Score": [round(score_a, 2), round(score_b, 2), STUDY_MEAN_MHQ],
+                "Tier": [mhq_category(score_a), mhq_category(score_b), mhq_category(STUDY_MEAN_MHQ)],
+                "Color": ["#38bdf8", "#14b8a6", "#f59e0b"],
+            }
+        )
+        fig_cmp = px.bar(
+            cmp_df,
+            x="MHQ Score",
+            y="Profile",
+            orientation="h",
+            text="MHQ Score",
+            hover_data=["Tier"],
+            color="Profile",
+            color_discrete_sequence=["#38bdf8", "#14b8a6", "#f59e0b"],
+            title="Side-by-Side MHQ Score Comparison",
+        )
+        fig_cmp.update_traces(texttemplate="%{text:.1f}", textposition="outside")
+        fig_cmp.update_layout(**PLOTLY_LAYOUT, showlegend=False, height=280, xaxis=dict(range=[-100, 210], title="Predicted Overall MHQ Score (-100 to 200)"), yaxis_title="")
+        st.plotly_chart(fig_cmp, use_container_width=True)
 
 elif active == "explorer":
     st.subheader("📊 MHQ Score Distribution & Demographic Trends")
@@ -497,16 +504,24 @@ elif active == "explorer":
 
         if not filt_bins.empty:
             hist_agg = filt_bins.groupby("bin_center", as_index=False)["count"].sum()
-            fig_hist, ax_hist = plt.subplots(figsize=(9, 3.8))
-            ax_hist.bar(hist_agg["bin_center"], hist_agg["count"], width=9.0, color="#0D9488", edgecolor="#0F172A", alpha=0.9)
-            ax_hist.axvline(weighted_mean, color="#F59E0B", linestyle="--", linewidth=1.6, label=f"Group Mean ({weighted_mean:.1f})")
-            ax_hist.set_title(f"MHQ Score Distribution (Age: {age_filter}, Sex: {sex_filter})")
-            ax_hist.set_xlabel("Overall MHQ Score")
-            ax_hist.set_ylabel("Respondent Count")
-            ax_hist.legend()
-            plt.tight_layout()
-            st.pyplot(fig_hist)
-            plt.close(fig_hist)
+            fig_hist = px.bar(
+                hist_agg,
+                x="bin_center",
+                y="count",
+                title=f"MHQ Score Distribution (Age: {age_filter}, Sex: {sex_filter})",
+                labels={"bin_center": "Overall MHQ Score", "count": "Respondents"},
+                color_discrete_sequence=["#14b8a6"],
+            )
+            if not np.isnan(weighted_mean):
+                fig_hist.add_vline(
+                    x=weighted_mean,
+                    line_dash="dash",
+                    line_color="#f59e0b",
+                    annotation_text=f"Group Mean ({weighted_mean:.1f})",
+                    annotation_position="top right",
+                )
+            fig_hist.update_layout(**PLOTLY_LAYOUT, height=360, bargap=0.06)
+            st.plotly_chart(fig_hist, use_container_width=True)
 
         age_grp = (
             summary_df[summary_df["age"].isin(AGE_ORDER)]
@@ -527,50 +542,58 @@ elif active == "explorer":
 
         g1, g2 = st.columns(2)
         with g1:
-            fig_age, ax_age = plt.subplots(figsize=(6.5, 4))
-            sns.barplot(data=age_grp, x="age", y="Overall MHQ", hue="age", palette="coolwarm", legend=False, ax=ax_age)
-            ax_age.axhline(STUDY_MEAN_MHQ, color="#F59E0B", linestyle="--", linewidth=1.2, label=f"Mean ({STUDY_MEAN_MHQ:.1f})")
-            ax_age.set_title("Mean Overall MHQ Score by Age Group")
-            ax_age.set_xlabel("Age Group")
-            ax_age.set_ylabel("Mean MHQ Score")
-            ax_age.tick_params(axis="x", rotation=40)
-            ax_age.legend()
-            plt.tight_layout()
-            st.pyplot(fig_age)
-            plt.close(fig_age)
+            fig_age = px.bar(
+                age_grp,
+                x="age",
+                y="Overall MHQ",
+                color="Overall MHQ",
+                color_continuous_scale="Tealgrn",
+                title="Mean Overall MHQ Score by Age Group",
+                labels={"age": "Age Group", "Overall MHQ": "Mean MHQ Score"},
+            )
+            fig_age.add_hline(
+                y=STUDY_MEAN_MHQ,
+                line_dash="dash",
+                line_color="#f59e0b",
+                annotation_text=f"Study Mean ({STUDY_MEAN_MHQ:.1f})",
+            )
+            fig_age.update_layout(**PLOTLY_LAYOUT, height=390, coloraxis_showscale=False)
+            st.plotly_chart(fig_age, use_container_width=True)
 
         with g2:
-            fig_sub, ax_sub = plt.subplots(figsize=(6.5, 4))
             melted = age_grp.melt(id_vars="age", var_name="Dimension", value_name="Mean Score")
-            sns.lineplot(data=melted, x="age", y="Mean Score", hue="Dimension", marker="o", ax=ax_sub)
-            ax_sub.set_title("All 5 MHQ Dimensions Across Age Groups")
-            ax_sub.set_xlabel("Age Group")
-            ax_sub.set_ylabel("Mean Score")
-            ax_sub.tick_params(axis="x", rotation=40)
-            ax_sub.legend(fontsize=8)
-            plt.tight_layout()
-            st.pyplot(fig_sub)
-            plt.close(fig_sub)
+            fig_sub = px.line(
+                melted,
+                x="age",
+                y="Mean Score",
+                color="Dimension",
+                markers=True,
+                title="All 5 MHQ Dimensions Across Age Groups",
+                labels={"age": "Age Group", "Mean Score": "Mean Score"},
+            )
+            fig_sub.update_layout(**PLOTLY_LAYOUT, height=390, hovermode="x unified", legend=dict(orientation="h", y=-0.25))
+            st.plotly_chart(fig_sub, use_container_width=True)
 
         if income_df is not None and not income_df.empty:
-            fig_inc, ax_inc = plt.subplots(figsize=(9.5, 4.2))
-            sns.barplot(
-                data=income_df,
+            fig_inc = px.bar(
+                income_df,
                 x="mean_mhq",
                 y="income_inr",
-                hue="income_inr",
-                palette="crest",
-                legend=False,
-                ax=ax_inc,
+                orientation="h",
+                color="mean_mhq",
+                color_continuous_scale="Teal",
+                hover_data={"count": ":,", "median_mhq": ":.1f", "mean_mhq": ":.2f"},
+                title="Mean Overall MHQ Score by Household Income (INR)",
+                labels={"mean_mhq": "Mean Overall MHQ Score", "income_inr": "Household Income (INR)", "count": "Respondents", "median_mhq": "Median MHQ"},
             )
-            ax_inc.axvline(STUDY_MEAN_MHQ, color="#F59E0B", linestyle="--", linewidth=1.3, label=f"Study Mean ({STUDY_MEAN_MHQ:.1f})")
-            ax_inc.set_title("Mean Overall MHQ Score by Household Income (INR)")
-            ax_inc.set_xlabel("Mean Overall MHQ Score")
-            ax_inc.set_ylabel("Household Income (INR)")
-            ax_inc.legend()
-            plt.tight_layout()
-            st.pyplot(fig_inc)
-            plt.close(fig_inc)
+            fig_inc.add_vline(
+                x=STUDY_MEAN_MHQ,
+                line_dash="dash",
+                line_color="#f59e0b",
+                annotation_text=f"Study Mean ({STUDY_MEAN_MHQ:.1f})",
+            )
+            fig_inc.update_layout(**PLOTLY_LAYOUT, height=420, coloraxis_showscale=False, yaxis=dict(categoryorder="array", categoryarray=income_df["income_inr"].tolist()[::-1]))
+            st.plotly_chart(fig_inc, use_container_width=True)
 
 elif active == "model":
     st.subheader("📈 Feature Importance, Model Performance & Statistical Findings")
@@ -587,34 +610,44 @@ elif active == "model":
 
     m_col1, m_col2 = st.columns(2)
     with m_col1:
-        fig_imp, ax_imp = plt.subplots(figsize=(6.5, 4.2))
-        sns.barplot(x=feat_imp.values, y=feat_imp.index, hue=feat_imp.index, palette="viridis", legend=False, ax=ax_imp)
-        ax_imp.set_title("Top 10 Predictors of Overall MHQ Score")
-        ax_imp.set_xlabel("Importance Score")
-        ax_imp.set_ylabel("Feature")
-        plt.tight_layout()
-        st.pyplot(fig_imp)
-        plt.close(fig_imp)
+        imp_df = feat_imp.reset_index()
+        imp_df.columns = ["Feature", "Importance"]
+        fig_imp = px.bar(
+            imp_df.iloc[::-1],
+            x="Importance",
+            y="Feature",
+            orientation="h",
+            color="Importance",
+            color_continuous_scale="Viridis",
+            title="Top 10 Predictors of Overall MHQ Score",
+            labels={"Importance": "Importance Score", "Feature": ""},
+        )
+        fig_imp.update_layout(**PLOTLY_LAYOUT, height=410, coloraxis_showscale=False)
+        st.plotly_chart(fig_imp, use_container_width=True)
 
     with m_col2:
         perf_df = pd.DataFrame([
-            {"Target": "Cognition Score", "R2": 0.1356},
-            {"Target": "Overall MHQ Score", "R2": 0.1348},
-            {"Target": "Adapt & Resilience", "R2": 0.1281},
-            {"Target": "Drive & Motivation", "R2": 0.1137},
-            {"Target": "Social Self Score", "R2": 0.1013},
+            {"Target": "Social Self Score", "R2": 0.1013, "RMSE": 72.52},
+            {"Target": "Drive & Motivation", "R2": 0.1137, "RMSE": 63.69},
+            {"Target": "Adapt & Resilience", "R2": 0.1281, "RMSE": 61.59},
+            {"Target": "Overall MHQ Score", "R2": 0.1348, "RMSE": 67.24},
+            {"Target": "Cognition Score", "R2": 0.1356, "RMSE": 63.40},
         ])
-        fig_perf, ax_perf = plt.subplots(figsize=(6.5, 4.2))
-        sns.barplot(data=perf_df, x="R2", y="Target", hue="Target", palette="crest", legend=False, ax=ax_perf)
-        for i, v in enumerate(perf_df["R2"]):
-            ax_perf.text(v + 0.002, i, f"{v:.4f}", va="center", fontsize=9, fontweight="bold")
-        ax_perf.set_xlim(0, 0.165)
-        ax_perf.set_title("Model Predictability (R²) by Target")
-        ax_perf.set_xlabel("R-squared (Variance Explained)")
-        ax_perf.set_ylabel("")
-        plt.tight_layout()
-        st.pyplot(fig_perf)
-        plt.close(fig_perf)
+        fig_perf = px.bar(
+            perf_df,
+            x="R2",
+            y="Target",
+            orientation="h",
+            text="R2",
+            color="R2",
+            color_continuous_scale="Teal",
+            hover_data={"RMSE": ":.2f", "R2": ":.4f"},
+            title="Model Predictability (R²) by Target",
+            labels={"R2": "R-squared (Variance Explained)", "Target": ""},
+        )
+        fig_perf.update_traces(texttemplate="%{text:.4f}", textposition="outside")
+        fig_perf.update_layout(**PLOTLY_LAYOUT, height=410, coloraxis_showscale=False, xaxis=dict(range=[0, 0.165]))
+        st.plotly_chart(fig_perf, use_container_width=True)
 
     st.markdown(
         """
@@ -723,7 +756,7 @@ if enable_swarm:
           let active = (win.__mhqLastRebuildKey !== currentKey);
           win.__mhqLastRebuildKey = currentKey;
 
-          const selector = '.hero-banner, div[data-testid="stMetric"], .stSelectbox, .stButton, .stDownloadButton, div[data-testid="stImage"], div[data-testid="stMarkdownContainer"] h2, div[data-testid="stMarkdownContainer"] h3, div[data-testid="stPyplot"]';
+          const selector = '.hero-banner, div[data-testid="stMetric"], .stSelectbox, .stButton, .stDownloadButton, div[data-testid="stImage"], div[data-testid="stMarkdownContainer"] h2, div[data-testid="stMarkdownContainer"] h3, div[data-testid="stPlotlyChart"]';
           let targets = [];
           function startRebuild() {{
             const rawEls = Array.from(doc.querySelectorAll(selector)).filter(el => {{
