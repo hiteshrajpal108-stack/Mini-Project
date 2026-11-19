@@ -215,7 +215,7 @@ def load_summaries():
 
 def get_model_categories(model) -> tuple[list[str], list[str], list[str]]:
     age_opts = AGE_ORDER
-    sex_opts = ["Female", "Male", "Prefer not to say"]
+    sex_opts = ["Female", "Male", "Other", "Prefer not to say"]
     return age_opts, sex_opts, INCOME_INR_OPTIONS
 
 
@@ -400,7 +400,7 @@ elif active == "explorer":
             filt_sum = filt_sum[filt_sum["age"] == age_filter]
             filt_bins = filt_bins[filt_bins["age"] == age_filter]
         if sex_filter != "All":
-            raw_sex_f = [sex_filter, "Männlich"] if sex_filter == "Male" else [sex_filter]
+            raw_sex_f = ["Other", "Other/Intersex"] if sex_filter == "Other" else ([sex_filter, "Männlich"] if sex_filter == "Male" else [sex_filter])
             filt_sum = filt_sum[filt_sum["biological_sex"].isin(raw_sex_f)]
             filt_bins = filt_bins[filt_bins["biological_sex"].isin(raw_sex_f)]
 
