@@ -75,14 +75,34 @@ st.markdown(
         transform: translateY(-1px);
         box-shadow: 0 6px 20px rgba(20, 184, 166, 0.45);
     }
-    /* Metric cards */
+    /* Metric cards with hover lift & accent border */
     div[data-testid="stMetric"] {
-        background: rgba(30, 41, 59, 0.6);
+        background: rgba(30, 41, 59, 0.65);
         border: 1px solid rgba(148, 163, 184, 0.18);
+        border-left: 4px solid #14b8a6;
         border-radius: 14px;
         padding: 14px 18px;
         backdrop-filter: blur(8px);
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
     }
+    div[data-testid="stMetric"]:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 26px rgba(13, 148, 136, 0.22);
+    }
+    .alert-card {
+        padding: 16px 20px;
+        border-radius: 14px;
+        margin-top: 8px;
+        font-size: 0.96rem;
+        line-height: 1.55;
+        color: #f8fafc;
+        box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
+    }
+    .alert-thriving { background: linear-gradient(135deg, rgba(13, 148, 136, 0.35), rgba(16, 185, 129, 0.25)); border: 1px solid #2dd4bf; }
+    .alert-succeeding { background: linear-gradient(135deg, rgba(34, 197, 94, 0.28), rgba(14, 165, 233, 0.20)); border: 1px solid #4ade80; }
+    .alert-managing { background: linear-gradient(135deg, rgba(234, 179, 8, 0.28), rgba(245, 158, 11, 0.18)); border: 1px solid #facc15; }
+    .alert-struggling { background: linear-gradient(135deg, rgba(249, 115, 22, 0.30), rgba(239, 68, 68, 0.22)); border: 1px solid #fb923c; }
+    .alert-distressed { background: linear-gradient(135deg, rgba(220, 38, 38, 0.35), rgba(153, 27, 27, 0.28)); border: 1px solid #f87171; }
     .hero-banner {
         padding: 28px 32px;
         border-radius: 18px;
@@ -281,40 +301,87 @@ if active == "prediction":
     with col1:
         selected_age = st.selectbox("Age Group", age_options, index=0)
     with col2:
-        selected_sex = st.selectbox("Biological Sex", sex_options, index=0)
+        selected_sex = st.selectbox(
+            "Biological Sex",
+            sex_options,
+            index=0,
+            format_func=lambda x: f"{'👩' if x == 'Female' else '👨' if x == 'Male' else '⚪'} {x}",
+        )
     with col3:
         selected_income = st.selectbox("Household Income (INR)", income_options, index=0)
 
     st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
-    if st.button("Predict MHQ Score", type="primary"):
+    if st.button("✨ Predict MHQ Score", type="primary"):
         pred = predict_mhq(model, selected_age, selected_sex, selected_income)
         delta = pred - STUDY_MEAN_MHQ
+        tier = mhq_category(pred)
 
-        m1, m2, m3 = st.columns(3)
-        m1.metric("Predicted Overall MHQ Score", f"{pred:.2f}", f"{delta:+.2f} vs. Study Mean")
-        m2.metric("Well-Being Tier", mhq_category(pred))
-        m3.metric("Study Average MHQ", f"{STUDY_MEAN_MHQ:.2f}")
+        percentile = 50.0
+        if bins_df is not None and not bins_df.empty:
+            tot = bins_df["count"].sum()
+            below = bins_df.loc[bins_df["bin_center"] <= pred, "count"].sum()
+            percentile = (below / tot) * 100 if tot > 0 else 50.0
 
-        fig_scale, ax_scale = plt.subplots(figsize=(9, 1.8))
-        tiers = [
-            (-100, -50, "#DC2626", "Distressed"),
-            (-50, 0, "#F97316", "Struggling"),
-            (0, 50, "#EAB308", "Managing"),
-            (50, 100, "#22C55E", "Succeeding"),
-            (100, 200, "#0D9488", "Thriving"),
-        ]
-        for start, end, color, label in tiers:
-            ax_scale.barh(0, end - start, left=start, height=0.45, color=color, alpha=0.85)
-            ax_scale.text((start + end) / 2, 0, label, ha="center", va="center", color="white", fontsize=8.5, fontweight="bold")
-        ax_scale.axvline(STUDY_MEAN_MHQ, color="white", linestyle="--", linewidth=1.4, label=f"Study Mean ({STUDY_MEAN_MHQ:.1f})")
-        ax_scale.scatter([pred], [0], color="white", edgecolor="black", s=160, zorder=5, label=f"Prediction ({pred:.1f})")
-        ax_scale.set_xlim(-100, 200)
-        ax_scale.set_yticks([])
-        ax_scale.set_xlabel("MHQ Score Scale (-100 to 200)")
-        ax_scale.legend(loc="upper center", bbox_to_anchor=(0.5, 1.42), ncol=2, frameon=False)
-        plt.tight_layout()
-        st.pyplot(fig_scale)
-        plt.close(fig_scale)
+        cohort_n = 0
+        if summary_df is not None and not summary_df.empty:
+            cohort_n = int(summary_df.loc[summary_df["age"] == selected_age, "count"].sum())
+
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("🎯 Predicted MHQ Score", f"{pred:.2f}", f"{delta:+.2f} vs. Mean")
+        m2.metric("🧭 Well-Being Tier", tier)
+        m3.metric("📈 Study Percentile", f"{percentile:.0f}th")
+        m4.metric("👥 Age Cohort Size", f"{cohort_n:,}")
+
+        st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
+        g_col, a_col = st.columns([1.6, 1.0])
+
+        with g_col:
+            from matplotlib.patches import Wedge
+            fig_gauge, ax_gauge = plt.subplots(figsize=(6.8, 3.4))
+            ax_gauge.set_xlim(-1.2, 1.2)
+            ax_gauge.set_ylim(-0.15, 1.2)
+            ax_gauge.set_aspect("equal")
+            ax_gauge.axis("off")
+            fig_gauge.patch.set_alpha(0.0)
+            ax_gauge.patch.set_alpha(0.0)
+
+            tiers = [
+                (-100, -50, "#DC2626"),
+                (-50, 0, "#F97316"),
+                (0, 50, "#EAB308"),
+                (50, 100, "#22C55E"),
+                (100, 200, "#0D9488"),
+            ]
+            for start, end, color in tiers:
+                t1 = 180 - ((end + 100) / 300) * 180
+                t2 = 180 - ((start + 100) / 300) * 180
+                ax_gauge.add_patch(Wedge((0, 0), 1.0, t1, t2, width=0.28, facecolor=color, edgecolor="#0f172a", linewidth=1.5))
+
+            clamped = max(-100.0, min(200.0, pred))
+            ang = np.deg2rad(180 - ((clamped + 100) / 300) * 180)
+            ax_gauge.plot([0, 0.82 * np.cos(ang)], [0, 0.82 * np.sin(ang)], color="#f8fafc", linewidth=3.2, zorder=5)
+            ax_gauge.scatter([0], [0], color="#14b8a6", s=110, zorder=6, edgecolor="#f8fafc", linewidth=1.5)
+            ax_gauge.text(0, 0.34, f"{pred:.1f}", ha="center", va="center", fontsize=22, fontweight="bold", color="#f8fafc")
+            ax_gauge.text(0, 0.14, tier, ha="center", va="center", fontsize=11, color="#5eead4", fontweight="bold")
+            ax_gauge.text(-1.02, -0.08, "-100", ha="center", fontsize=9, color="#94a3b8")
+            ax_gauge.text(0, 1.08, "50", ha="center", fontsize=9, color="#94a3b8")
+            ax_gauge.text(1.02, -0.08, "200", ha="center", fontsize=9, color="#94a3b8")
+            plt.tight_layout()
+            st.pyplot(fig_gauge)
+            plt.close(fig_gauge)
+
+        with a_col:
+            if pred >= 100:
+                cls, msg = "alert-thriving", "🟢 <b>Thriving Well-Being</b><br>Strong emotional resilience, clarity, and life satisfaction."
+            elif pred >= 50:
+                cls, msg = "alert-succeeding", "🟢 <b>Succeeding Well-Being</b><br>Functioning well across work, relationships, and daily mood."
+            elif pred >= 0:
+                cls, msg = "alert-managing", "🟡 <b>Managing / Enduring</b><br>Coping with daily life, though with occasional stress or fatigue."
+            elif pred >= -50:
+                cls, msg = "alert-struggling", "🟠 <b>Struggling</b><br>Noticeable distress affecting daily mood or focus."
+            else:
+                cls, msg = "alert-distressed", "🔴 <b>Distressed</b><br>Significant distress; professional clinical support is recommended."
+            st.markdown(f'<div class="alert-card {cls}">{msg}<br><br><small>Study Average: <b>{STUDY_MEAN_MHQ:.2f}</b> · Note: Demographic screening indicator only, not a clinical diagnosis.</small></div>', unsafe_allow_html=True)
 
 elif active == "explorer":
     st.subheader("📊 MHQ Score Distribution & Demographic Trends")
