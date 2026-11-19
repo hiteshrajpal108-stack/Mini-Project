@@ -295,23 +295,60 @@ active = st.session_state.active_page
 
 if active == "prediction":
     st.subheader("🎯 Predict Overall MHQ Score")
+    st.caption("Pick a one-click demo preset or customize demographics below")
+
+    if "pred_age" not in st.session_state:
+        st.session_state.pred_age = age_options[0]
+    if "pred_sex" not in st.session_state:
+        st.session_state.pred_sex = sex_options[0]
+    if "pred_inc" not in st.session_state:
+        st.session_state.pred_inc = income_options[0]
+    if "run_pred" not in st.session_state:
+        st.session_state.run_pred = False
+
+    p1, p2, p3 = st.columns(3)
+    with p1:
+        if st.button("🎓 Young Adult (18, Female)", use_container_width=True):
+            st.session_state.pred_age = "18"
+            st.session_state.pred_sex = "Female"
+            st.session_state.pred_inc = "Less than ₹1,00,000"
+            st.session_state.run_pred = True
+            st.rerun()
+    with p2:
+        if st.button("💼 Mid-Career (35-44, Male)", use_container_width=True):
+            st.session_state.pred_age = "35-44"
+            st.session_state.pred_sex = "Male"
+            st.session_state.pred_inc = "₹10,00,001 – ₹20,00,000"
+            st.session_state.run_pred = True
+            st.rerun()
+    with p3:
+        if st.button("🌿 Older Adult (65-74, Male)", use_container_width=True):
+            st.session_state.pred_age = "65-74"
+            st.session_state.pred_sex = "Male"
+            st.session_state.pred_inc = "₹20,00,001 – ₹40,00,000"
+            st.session_state.run_pred = True
+            st.rerun()
+
     st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        selected_age = st.selectbox("Age Group", age_options, index=0)
+        selected_age = st.selectbox("Age Group", age_options, key="pred_age")
     with col2:
         selected_sex = st.selectbox(
             "Biological Sex",
             sex_options,
-            index=0,
+            key="pred_sex",
             format_func=lambda x: f"{'👩' if x == 'Female' else '👨' if x == 'Male' else '⚪'} {x}",
         )
     with col3:
-        selected_income = st.selectbox("Household Income (INR)", income_options, index=0)
+        selected_income = st.selectbox("Household Income (INR)", income_options, key="pred_inc")
 
     st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
     if st.button("✨ Predict MHQ Score", type="primary"):
+        st.session_state.run_pred = True
+
+    if st.session_state.run_pred:
         pred = predict_mhq(model, selected_age, selected_sex, selected_income)
         delta = pred - STUDY_MEAN_MHQ
         tier = mhq_category(pred)
@@ -382,6 +419,47 @@ if active == "prediction":
             else:
                 cls, msg = "alert-distressed", "🔴 <b>Distressed</b><br>Significant distress; professional clinical support is recommended."
             st.markdown(f'<div class="alert-card {cls}">{msg}<br><br><small>Study Average: <b>{STUDY_MEAN_MHQ:.2f}</b> · Note: Demographic screening indicator only, not a clinical diagnosis.</small></div>', unsafe_allow_html=True)
+
+    st.divider()
+    st.subheader("⚖️ Compare Two Profiles (Profile A vs. Profile B)")
+    ca, cb = st.columns(2)
+    with ca:
+        st.markdown("**Profile A**")
+        age_a = st.selectbox("Age Group (A)", age_options, index=0, key="cmp_age_a")
+        sex_a = st.selectbox("Biological Sex (A)", sex_options, index=0, key="cmp_sex_a")
+        inc_a = st.selectbox("Household Income (A)", income_options, index=0, key="cmp_inc_a")
+    with cb:
+        st.markdown("**Profile B**")
+        age_b = st.selectbox("Age Group (B)", age_options, index=min(8, len(age_options) - 1), key="cmp_age_b")
+        sex_b = st.selectbox("Biological Sex (B)", sex_options, index=min(1, len(sex_options) - 1), key="cmp_sex_b")
+        inc_b = st.selectbox("Household Income (B)", income_options, index=min(4, len(income_options) - 1), key="cmp_inc_b")
+
+    if st.button("⚖️ Compare Profile A vs. Profile B", type="primary"):
+        score_a = predict_mhq(model, age_a, sex_a, inc_a)
+        score_b = predict_mhq(model, age_b, sex_b, inc_b)
+        diff_ba = score_b - score_a
+
+        cm1, cm2, cm3 = st.columns(3)
+        cm1.metric("Profile A Predicted MHQ", f"{score_a:.2f}", mhq_category(score_a))
+        cm2.metric("Profile B Predicted MHQ", f"{score_b:.2f}", mhq_category(score_b))
+        cm3.metric("Difference (B − A)", f"{diff_ba:+.2f} pts", "Profile B Higher" if diff_ba >= 0 else "Profile A Higher")
+
+        fig_cmp, ax_cmp = plt.subplots(figsize=(8.5, 2.8))
+        labels = [f"Profile A ({age_a}, {sex_a})", f"Profile B ({age_b}, {sex_b})", "Study Average"]
+        vals = [score_a, score_b, STUDY_MEAN_MHQ]
+        bar_colors = ["#38bdf8", "#14b8a6", "#f59e0b"]
+        bars = ax_cmp.barh(labels, vals, color=bar_colors, height=0.52)
+        for bar, v in zip(bars, vals):
+            offset = 3 if v >= 0 else -3
+            ha = "left" if v >= 0 else "right"
+            ax_cmp.text(v + offset, bar.get_y() + bar.get_height() / 2, f"{v:.1f}", va="center", ha=ha, fontweight="bold")
+        ax_cmp.axvline(0, color="#64748b", linewidth=1)
+        ax_cmp.set_xlim(-100, 200)
+        ax_cmp.set_xlabel("Predicted Overall MHQ Score (-100 to 200)")
+        ax_cmp.set_title("Side-by-Side MHQ Score Comparison")
+        plt.tight_layout()
+        st.pyplot(fig_cmp)
+        plt.close(fig_cmp)
 
 elif active == "explorer":
     st.subheader("📊 MHQ Score Distribution & Demographic Trends")

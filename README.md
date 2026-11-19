@@ -1,8 +1,19 @@
-# 🧠 MHQ Mental Well-Being Prediction & Interactive Dashboard
+# 🧠 MHQ Research & Well-Being Dashboard
 
 **Python 3.13** · **Streamlit** · **Scikit-Learn (Random Forest)** · **Polars (240,012 Rows)** · **MIT License**
 
-An end-to-end data science and machine learning project analyzing **240,012 Mental Health Questionnaire (MHQ)** responses across **207 variables** to predict mental well-being (`overall_mhq_score`) and domain sub-scores from demographic features (`age`, `biological_sex`, `income_household`), complete with statistical hypothesis testing and a ready-to-deploy **Streamlit** web application.
+> **🚀 Live App:** Open the deployed interactive dashboard at **`mhq-wellbeing-predictor.streamlit.app`**
+
+An end-to-end data science and machine learning project analyzing **240,012 Mental Health Questionnaire (MHQ)** responses across **207 variables** to predict mental well-being (`overall_mhq_score`) and domain sub-scores from demographic features (`age`, `biological_sex`, `income_household` normalized in INR), complete with statistical hypothesis testing, an interactive research paper, and a deployed **Streamlit** web application.
+
+---
+
+## ✨ Dashboard Highlights
+
+- **🎯 Live Prediction & One-Click Demo Presets:** Instantly test Young Adult, Mid-Career, and Older Adult profiles with a semicircular MHQ gauge, well-being tier card, and study percentile.
+- **⚖️ Profile A vs. Profile B Comparison:** Compare two demographic profiles side-by-side to see exact predicted MHQ score differences.
+- **📊 Demographic Explorer:** Filter distributions by age and biological sex, explore all 5 MHQ dimensions across age groups, and inspect INR-normalized income trends.
+- **📄 Built-In Research Paper:** Read the plain-English overview, glossary, and 6 embedded figures directly in the app or download `research_paper.html`.
 
 ---
 
@@ -13,10 +24,15 @@ One-Way ANOVA and Random Forest feature importance both confirm a strong, statis
 
 ![Mean Overall MHQ Score by Age Group](assets/mhq_by_age_distribution.png)
 
-### 2. Top Demographic Predictors (Random Forest)
+### 2. Household Income Trends (Standardized in INR)
+All mixed currency brackets were standardized into 10 Indian Rupee (INR) brackets for clear regional comparison.
+
+![Mean Overall MHQ Score by Household Income (INR)](assets/mhq_by_income_inr.png)
+
+### 3. Top Demographic Predictors (Random Forest)
 ![Top 10 Demographic Predictors](assets/feature_importance.png)
 
-### 3. Predictability Across MHQ Targets
+### 4. Predictability Across MHQ Targets
 ![Model Predictability Comparison](assets/subscore_predictability.png)
 
 | Target Variable | R² Score | RMSE | Interpretation |
@@ -46,41 +62,39 @@ One-Way ANOVA and Random Forest feature importance both confirm a strong, statis
 
 ```mermaid
 flowchart LR
-    A[Raw Dataset<br/>240,012 × 207 CSV] -->|Polars Lazy Scan| B[Data Cleaning & Audit<br/>biological_sex, age, income]
+    A[Raw Dataset<br/>240,012 × 207 CSV] -->|Polars Lazy Scan| B[Data Cleaning & Audit<br/>biological_sex, age, INR income]
     B --> C[Statistical Tests<br/>ANOVA, Chi-Square, Correlation]
     B --> D[Sklearn Pipeline<br/>SimpleImputer → OneHotEncoder → RandomForest]
     D -->|joblib export| E[mhq_model.joblib]
-    E --> F[Streamlit App<br/>Live Prediction + Explorer + Metrics]
+    E --> F[Streamlit App<br/>Live Prediction + Comparison + Explorer + Paper]
 ```
 
 ---
 
-## 🚀 Quickstart & Deployment
+## 🚀 Quickstart
 
-### Run Locally
 ```bash
 pip install -r requirements.txt
 streamlit run app.py
 ```
-
-### Deploy on Streamlit Community Cloud
-1. Push this repository to GitHub (`hiteshrajpal108-stack`).
-2. Open Streamlit Community Cloud (`share.streamlit.io`), select your repository, branch `main`, and main file `app.py`.
-3. Click **Deploy** — `app.py` loads `mhq_model.joblib` directly for instant live predictions without requiring the 362 MB raw CSV.
 
 ---
 
 ## 📁 Repository Structure
 
 ```text
-├── app.py                     # Interactive Streamlit dashboard (Live Prediction, Explorer, Model Metrics)
-├── PythonProjectNew.ipynb     # Complete error-free analysis & training notebook
-├── mhq_model.joblib           # Pre-trained Random Forest Pipeline
-├── Full_Statistics.csv        # Exported numeric summary statistics
-├── Presentation_Summary.md    # Concise presentation & findings brief
-├── AI_Insights_Report.md      # Automated data exploration notes
-├── requirements.txt           # Python dependencies
-├── .streamlit/config.toml     # Custom Streamlit UI theme
-├── assets/                    # Publication-ready charts embedded in README
-└── LICENSE                    # MIT License
+├── app.py                        # Interactive Streamlit dashboard (Presets, Comparison, Explorer, Paper)
+├── PythonProjectNew.ipynb        # Complete error-free analysis & training notebook
+├── Research_Paper_Interactive.html # Self-contained interactive research paper with 6 figures & glossary
+├── mhq_model.joblib              # Pre-trained Random Forest Pipeline
+├── demographic_summary.csv       # Pre-aggregated age & biological sex statistics
+├── mhq_bins.csv                  # Pre-binned histogram counts for fast cloud charts
+├── income_summary.csv            # INR-normalized household income statistics
+├── Full_Statistics.csv           # Exported numeric summary statistics
+├── Presentation_Summary.md       # Concise presentation & findings brief
+├── AI_Insights_Report.md         # Automated data exploration notes
+├── requirements.txt              # Python dependencies
+├── .streamlit/config.toml        # Custom Streamlit UI theme
+├── assets/                       # Publication-ready charts embedded in README & Paper
+└── LICENSE                       # MIT License
 ```
