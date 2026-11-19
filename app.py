@@ -731,6 +731,7 @@ This study evaluates whether **age**, **biological sex**, and **household income
         ("subscore_by_age_and_sex.png", "Figure 4: Mean Overall MHQ Score by Biological Sex & Sub-Score Trajectories Across Age"),
         ("feature_importance.png", "Figure 5: Top 10 Demographic Predictors (INR Normalized)"),
         ("subscore_predictability.png", "Figure 6: Model Predictability (R²) Across Overall MHQ and Domain Sub-Scores"),
+        ("mhq_direct_indirect_relations.png", "Figure 7: Direct Pearson Correlations (r) & Indirect Lifestyle / Socioeconomic MHQ Score Gaps"),
     ]:
         img_p = os.path.join(assets_dir, img_name)
         if os.path.exists(img_p):
