@@ -299,174 +299,195 @@ st.markdown(
 
 active = st.session_state.active_page
 
-if active == "prediction":
-    st.subheader("🎯 Predict Overall MHQ Score")
-    st.caption("Pick a one-click demo preset or customize demographics below")
+def render_prediction_results(selected_age: str, selected_sex: str, selected_income: str):
+    pred = predict_mhq(model, selected_age, selected_sex, selected_income)
+    delta = pred - STUDY_MEAN_MHQ
+    tier = mhq_category(pred)
 
-    if "pred_age" not in st.session_state:
-        st.session_state.pred_age = age_options[0]
-    if "pred_sex" not in st.session_state:
-        st.session_state.pred_sex = sex_options[0]
-    if "pred_inc" not in st.session_state:
-        st.session_state.pred_inc = income_options[0]
-    if "run_pred" not in st.session_state:
-        st.session_state.run_pred = False
+    percentile = 50.0
+    if bins_df is not None and not bins_df.empty:
+        tot = bins_df["count"].sum()
+        below = bins_df.loc[bins_df["bin_center"] <= pred, "count"].sum()
+        percentile = (below / tot) * 100 if tot > 0 else 50.0
 
-    p1, p2, p3 = st.columns(3)
-    with p1:
-        if st.button("🎓 Young Adult (18, Female)", use_container_width=True):
-            st.session_state.pred_age = "18"
-            st.session_state.pred_sex = "Female"
-            st.session_state.pred_inc = "Less than ₹1,00,000"
-            st.session_state.run_pred = True
-            st.rerun()
-    with p2:
-        if st.button("💼 Mid-Career (35-44, Male)", use_container_width=True):
-            st.session_state.pred_age = "35-44"
-            st.session_state.pred_sex = "Male"
-            st.session_state.pred_inc = "₹10,00,001 – ₹20,00,000"
-            st.session_state.run_pred = True
-            st.rerun()
-    with p3:
-        if st.button("🌿 Older Adult (65-74, Male)", use_container_width=True):
-            st.session_state.pred_age = "65-74"
-            st.session_state.pred_sex = "Male"
-            st.session_state.pred_inc = "₹20,00,001 – ₹40,00,000"
-            st.session_state.run_pred = True
-            st.rerun()
+    cohort_n = 0
+    if summary_df is not None and not summary_df.empty:
+        cohort_n = int(summary_df.loc[summary_df["age"] == selected_age, "count"].sum())
+
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("🎯 Predicted MHQ Score", f"{pred:.2f}", f"{delta:+.2f} vs. Mean")
+    m2.metric("🧭 Well-Being Tier", tier)
+    m3.metric("📈 Study Percentile", f"{percentile:.0f}th")
+    m4.metric("👥 Age Cohort Size", f"{cohort_n:,}")
 
     st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns(3)
+    g_col, a_col = st.columns([1.6, 1.0])
 
-    with col1:
-        selected_age = st.selectbox("Age Group", age_options, key="pred_age")
-    with col2:
-        selected_sex = st.selectbox(
-            "Biological Sex",
-            sex_options,
-            key="pred_sex",
-            format_func=lambda x: f"{'👩' if x == 'Female' else '👨' if x == 'Male' else '⚪'} {x}",
-        )
-    with col3:
-        selected_income = st.selectbox("Household Income (INR)", income_options, key="pred_inc")
-
-    st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
-    if st.button("✨ Predict MHQ Score", type="primary"):
-        st.session_state.run_pred = True
-
-    if st.session_state.run_pred:
-        pred = predict_mhq(model, selected_age, selected_sex, selected_income)
-        delta = pred - STUDY_MEAN_MHQ
-        tier = mhq_category(pred)
-
-        percentile = 50.0
-        if bins_df is not None and not bins_df.empty:
-            tot = bins_df["count"].sum()
-            below = bins_df.loc[bins_df["bin_center"] <= pred, "count"].sum()
-            percentile = (below / tot) * 100 if tot > 0 else 50.0
-
-        cohort_n = 0
-        if summary_df is not None and not summary_df.empty:
-            cohort_n = int(summary_df.loc[summary_df["age"] == selected_age, "count"].sum())
-
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("🎯 Predicted MHQ Score", f"{pred:.2f}", f"{delta:+.2f} vs. Mean")
-        m2.metric("🧭 Well-Being Tier", tier)
-        m3.metric("📈 Study Percentile", f"{percentile:.0f}th")
-        m4.metric("👥 Age Cohort Size", f"{cohort_n:,}")
-
-        st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
-        g_col, a_col = st.columns([1.6, 1.0])
-
-        with g_col:
-            fig_gauge = go.Figure(
-                go.Indicator(
-                    mode="gauge+number+delta",
-                    value=pred,
-                    delta={"reference": STUDY_MEAN_MHQ, "valueformat": ".1f"},
-                    number={"valueformat": ".1f", "font": {"size": 42, "color": "#f8fafc"}},
-                    title={"text": f"Predicted MHQ Score · {tier}", "font": {"size": 16, "color": "#5eead4"}},
-                    gauge={
-                        "axis": {"range": [-100, 200], "tickcolor": "#94a3b8"},
-                        "bar": {"color": "#14b8a6", "thickness": 0.3},
-                        "bgcolor": "rgba(15,23,42,0.5)",
-                        "steps": [
-                            {"range": [-100, -50], "color": "rgba(220,38,38,0.55)"},
-                            {"range": [-50, 0], "color": "rgba(249,115,22,0.55)"},
-                            {"range": [0, 50], "color": "rgba(234,179,8,0.55)"},
-                            {"range": [50, 100], "color": "rgba(34,197,94,0.55)"},
-                            {"range": [100, 200], "color": "rgba(13,148,136,0.55)"},
-                        ],
-                        "threshold": {
-                            "line": {"color": "#f59e0b", "width": 3},
-                            "thickness": 0.85,
-                            "value": STUDY_MEAN_MHQ,
-                        },
+    with g_col:
+        fig_gauge = go.Figure(
+            go.Indicator(
+                mode="gauge+number+delta",
+                value=pred,
+                delta={"reference": STUDY_MEAN_MHQ, "valueformat": ".1f"},
+                number={"valueformat": ".1f", "font": {"size": 42, "color": "#f8fafc"}},
+                title={"text": f"Predicted MHQ Score · {tier}", "font": {"size": 16, "color": "#5eead4"}},
+                gauge={
+                    "axis": {"range": [-100, 200], "tickcolor": "#94a3b8"},
+                    "bar": {"color": "#14b8a6", "thickness": 0.3},
+                    "bgcolor": "rgba(15,23,42,0.5)",
+                    "steps": [
+                        {"range": [-100, -50], "color": "rgba(220,38,38,0.55)"},
+                        {"range": [-50, 0], "color": "rgba(249,115,22,0.55)"},
+                        {"range": [0, 50], "color": "rgba(234,179,8,0.55)"},
+                        {"range": [50, 100], "color": "rgba(34,197,94,0.55)"},
+                        {"range": [100, 200], "color": "rgba(13,148,136,0.55)"},
+                    ],
+                    "threshold": {
+                        "line": {"color": "#f59e0b", "width": 3},
+                        "thickness": 0.85,
+                        "value": STUDY_MEAN_MHQ,
                     },
-                )
+                },
             )
-            fig_gauge.update_layout(**PLOTLY_LAYOUT, height=320)
-            st.plotly_chart(fig_gauge, use_container_width=True)
+        )
+        fig_gauge.update_layout(**PLOTLY_LAYOUT, height=320)
+        st.plotly_chart(fig_gauge, use_container_width=True)
 
-        with a_col:
-            if pred >= 100:
-                cls, msg = "alert-thriving", "🟢 <b>Thriving Well-Being</b><br>Strong emotional resilience, clarity, and life satisfaction."
-            elif pred >= 50:
-                cls, msg = "alert-succeeding", "🟢 <b>Succeeding Well-Being</b><br>Functioning well across work, relationships, and daily mood."
-            elif pred >= 0:
-                cls, msg = "alert-managing", "🟡 <b>Managing / Enduring</b><br>Coping with daily life, though with occasional stress or fatigue."
-            elif pred >= -50:
-                cls, msg = "alert-struggling", "🟠 <b>Struggling</b><br>Noticeable distress affecting daily mood or focus."
-            else:
-                cls, msg = "alert-distressed", "🔴 <b>Distressed</b><br>Significant distress; professional clinical support is recommended."
-            st.markdown(f'<div class="alert-card {cls}">{msg}<br><br><small>Study Average: <b>{STUDY_MEAN_MHQ:.2f}</b> · Note: Demographic screening indicator only, not a clinical diagnosis.</small></div>', unsafe_allow_html=True)
+    with a_col:
+        if pred >= 100:
+            cls, msg = "alert-thriving", "🟢 <b>Thriving Well-Being</b><br>Strong emotional resilience, clarity, and life satisfaction."
+        elif pred >= 50:
+            cls, msg = "alert-succeeding", "🟢 <b>Succeeding Well-Being</b><br>Functioning well across work, relationships, and daily mood."
+        elif pred >= 0:
+            cls, msg = "alert-managing", "🟡 <b>Managing / Enduring</b><br>Coping with daily life, though with occasional stress or fatigue."
+        elif pred >= -50:
+            cls, msg = "alert-struggling", "🟠 <b>Struggling</b><br>Noticeable distress affecting daily mood or focus."
+        else:
+            cls, msg = "alert-distressed", "🔴 <b>Distressed</b><br>Significant distress; professional clinical support is recommended."
+        st.markdown(
+            f'<div class="alert-card {cls}">{msg}<br><br><small>Profile: <b>{selected_age}</b> · <b>{selected_sex}</b> · <b>{selected_income}</b><br>Study Average: <b>{STUDY_MEAN_MHQ:.2f}</b> · Screening indicator only, not a clinical diagnosis.</small></div>',
+            unsafe_allow_html=True,
+        )
+
+
+if active == "prediction":
+    if "pred_mode" not in st.session_state:
+        st.session_state.pred_mode = "custom"
+    if "active_preset" not in st.session_state:
+        st.session_state.active_preset = "young"
+
+    st.subheader("🎯 Live MHQ Prediction Workspace")
+    m_col1, m_col2, m_col3 = st.columns(3)
+    modes = [
+        ("⚡ Quick Demo Presets", "presets"),
+        ("🎯 Custom Prediction", "custom"),
+        ("⚖️ Compare Profiles (A vs. B)", "compare"),
+    ]
+    for col_box, (m_label, m_key) in zip([m_col1, m_col2, m_col3], modes):
+        with col_box:
+            if st.button(
+                m_label,
+                key=f"mode_{m_key}",
+                type="primary" if st.session_state.pred_mode == m_key else "secondary",
+                use_container_width=True,
+            ):
+                st.session_state.pred_mode = m_key
+                st.rerun()
 
     st.divider()
-    st.subheader("⚖️ Compare Two Profiles (Profile A vs. Profile B)")
-    ca, cb = st.columns(2)
-    with ca:
-        st.markdown("**Profile A**")
-        age_a = st.selectbox("Age Group (A)", age_options, index=0, key="cmp_age_a")
-        sex_a = st.selectbox("Biological Sex (A)", sex_options, index=0, key="cmp_sex_a")
-        inc_a = st.selectbox("Household Income (A)", income_options, index=0, key="cmp_inc_a")
-    with cb:
-        st.markdown("**Profile B**")
-        age_b = st.selectbox("Age Group (B)", age_options, index=min(8, len(age_options) - 1), key="cmp_age_b")
-        sex_b = st.selectbox("Biological Sex (B)", sex_options, index=min(1, len(sex_options) - 1), key="cmp_sex_b")
-        inc_b = st.selectbox("Household Income (B)", income_options, index=min(4, len(income_options) - 1), key="cmp_inc_b")
 
-    if st.button("⚖️ Compare Profile A vs. Profile B", type="primary"):
-        score_a = predict_mhq(model, age_a, sex_a, inc_a)
-        score_b = predict_mhq(model, age_b, sex_b, inc_b)
-        diff_ba = score_b - score_a
+    if st.session_state.pred_mode == "presets":
+        st.markdown("### ⚡ Quick Demo Presets")
+        st.caption("Click any persona below to immediately view their predicted MHQ score and tier")
+        PRESETS = {
+            "young": ("🎓 Young Adult (18, Female)", "18", "Female", "Less than ₹1,00,000"),
+            "mid": ("💼 Mid-Career (35-44, Male)", "35-44", "Male", "₹10,00,001 – ₹20,00,000"),
+            "older": ("🌿 Older Adult (65-74, Male)", "65-74", "Male", "₹20,00,001 – ₹40,00,000"),
+        }
+        p1, p2, p3 = st.columns(3)
+        for p_col, (p_key, (p_label, _, _, _)) in zip([p1, p2, p3], PRESETS.items()):
+            with p_col:
+                if st.button(
+                    p_label,
+                    key=f"preset_{p_key}",
+                    type="primary" if st.session_state.active_preset == p_key else "secondary",
+                    use_container_width=True,
+                ):
+                    st.session_state.active_preset = p_key
+                    st.rerun()
 
-        cm1, cm2, cm3 = st.columns(3)
-        cm1.metric("Profile A Predicted MHQ", f"{score_a:.2f}", mhq_category(score_a))
-        cm2.metric("Profile B Predicted MHQ", f"{score_b:.2f}", mhq_category(score_b))
-        cm3.metric("Difference (B − A)", f"{diff_ba:+.2f} pts", "Profile B Higher" if diff_ba >= 0 else "Profile A Higher")
+        st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
+        _, p_age, p_sex, p_inc = PRESETS[st.session_state.active_preset]
+        render_prediction_results(p_age, p_sex, p_inc)
 
-        cmp_df = pd.DataFrame(
-            {
-                "Profile": [f"Profile A ({age_a}, {sex_a})", f"Profile B ({age_b}, {sex_b})", "Study Average"],
-                "MHQ Score": [round(score_a, 2), round(score_b, 2), STUDY_MEAN_MHQ],
-                "Tier": [mhq_category(score_a), mhq_category(score_b), mhq_category(STUDY_MEAN_MHQ)],
-                "Color": ["#38bdf8", "#14b8a6", "#f59e0b"],
-            }
-        )
-        fig_cmp = px.bar(
-            cmp_df,
-            x="MHQ Score",
-            y="Profile",
-            orientation="h",
-            text="MHQ Score",
-            hover_data=["Tier"],
-            color="Profile",
-            color_discrete_sequence=["#38bdf8", "#14b8a6", "#f59e0b"],
-            title="Side-by-Side MHQ Score Comparison",
-        )
-        fig_cmp.update_traces(texttemplate="%{text:.1f}", textposition="outside")
-        fig_cmp.update_layout(**PLOTLY_LAYOUT, showlegend=False, height=280, xaxis=dict(range=[-100, 210], title="Predicted Overall MHQ Score (-100 to 200)"), yaxis_title="")
-        st.plotly_chart(fig_cmp, use_container_width=True)
+    elif st.session_state.pred_mode == "custom":
+        st.markdown("### 🎯 Custom Demographic Prediction")
+        st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            selected_age = st.selectbox("Age Group", age_options, index=0, key="custom_age")
+        with col2:
+            selected_sex = st.selectbox(
+                "Biological Sex",
+                sex_options,
+                index=0,
+                key="custom_sex",
+                format_func=lambda x: f"{'👩' if x == 'Female' else '👨' if x == 'Male' else '⚪'} {x}",
+            )
+        with col3:
+            selected_income = st.selectbox("Household Income (INR)", income_options, index=0, key="custom_inc")
+
+        st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
+        if st.button("✨ Predict MHQ Score", type="primary"):
+            render_prediction_results(selected_age, selected_sex, selected_income)
+
+    elif st.session_state.pred_mode == "compare":
+        st.markdown("### ⚖️ Compare Two Profiles (Profile A vs. Profile B)")
+        st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
+        ca, cb = st.columns(2)
+        with ca:
+            st.markdown("**Profile A**")
+            age_a = st.selectbox("Age Group (A)", age_options, index=0, key="cmp_age_a")
+            sex_a = st.selectbox("Biological Sex (A)", sex_options, index=0, key="cmp_sex_a")
+            inc_a = st.selectbox("Household Income (A)", income_options, index=0, key="cmp_inc_a")
+        with cb:
+            st.markdown("**Profile B**")
+            age_b = st.selectbox("Age Group (B)", age_options, index=min(8, len(age_options) - 1), key="cmp_age_b")
+            sex_b = st.selectbox("Biological Sex (B)", sex_options, index=min(1, len(sex_options) - 1), key="cmp_sex_b")
+            inc_b = st.selectbox("Household Income (B)", income_options, index=min(4, len(income_options) - 1), key="cmp_inc_b")
+
+        st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
+        if st.button("⚖️ Compare Profile A vs. Profile B", type="primary"):
+            score_a = predict_mhq(model, age_a, sex_a, inc_a)
+            score_b = predict_mhq(model, age_b, sex_b, inc_b)
+            diff_ba = score_b - score_a
+
+            cm1, cm2, cm3 = st.columns(3)
+            cm1.metric("Profile A Predicted MHQ", f"{score_a:.2f}", mhq_category(score_a))
+            cm2.metric("Profile B Predicted MHQ", f"{score_b:.2f}", mhq_category(score_b))
+            cm3.metric("Difference (B − A)", f"{diff_ba:+.2f} pts", "Profile B Higher" if diff_ba >= 0 else "Profile A Higher")
+
+            cmp_df = pd.DataFrame(
+                {
+                    "Profile": [f"Profile A ({age_a}, {sex_a})", f"Profile B ({age_b}, {sex_b})", "Study Average"],
+                    "MHQ Score": [round(score_a, 2), round(score_b, 2), STUDY_MEAN_MHQ],
+                    "Tier": [mhq_category(score_a), mhq_category(score_b), mhq_category(STUDY_MEAN_MHQ)],
+                }
+            )
+            fig_cmp = px.bar(
+                cmp_df,
+                x="MHQ Score",
+                y="Profile",
+                orientation="h",
+                text="MHQ Score",
+                hover_data=["Tier"],
+                color="Profile",
+                color_discrete_sequence=["#38bdf8", "#14b8a6", "#f59e0b"],
+                title="Side-by-Side MHQ Score Comparison",
+            )
+            fig_cmp.update_traces(texttemplate="%{text:.1f}", textposition="outside")
+            fig_cmp.update_layout(**PLOTLY_LAYOUT, showlegend=False, height=280, xaxis=dict(range=[-100, 210], title="Predicted Overall MHQ Score (-100 to 200)"), yaxis_title="")
+            st.plotly_chart(fig_cmp, use_container_width=True)
 
 elif active == "explorer":
     st.subheader("📊 MHQ Score Distribution & Demographic Trends")
@@ -786,7 +807,7 @@ if enable_swarm:
           bar.id = 'mhq-swarm-toolbar';
           Object.assign(bar.style, {{
             position: 'fixed',
-            bottom: '18px',
+            bottom: '64px',
             right: '22px',
             zIndex: '999999',
             display: 'flex',
