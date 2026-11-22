@@ -1,4 +1,5 @@
 import os
+import urllib.parse
 import joblib
 import numpy as np
 import pandas as pd
@@ -135,6 +136,28 @@ st.markdown(
     .section-spacer {
         height: 22px;
     }
+    .ai-coach-card {
+        padding: 20px 24px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.88), rgba(13, 148, 136, 0.14));
+        border: 1px solid rgba(45, 212, 191, 0.35);
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+        color: #e2e8f0;
+        line-height: 1.65;
+        margin-top: 10px;
+    }
+    .ai-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        margin-bottom: 12px;
+        background: rgba(20, 184, 166, 0.22);
+        border: 1px solid rgba(45, 212, 191, 0.45);
+        color: #5eead4;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -250,36 +273,195 @@ def mhq_category(score: float) -> str:
     return "Distressed"
 
 
-def get_ai_wellbeing_advice(age: str, sex: str, income: str, predicted_mhq: float, tier_label: str) -> tuple[str, bool]:
-    """Generate personalized lifestyle advice via Gemini API with safe offline fallback."""
-    fallback = (
-        f"**Research-Backed Well-Being Guidance ({tier_label} Tier · Predicted MHQ {predicted_mhq:.1f}):**\n\n"
-        "- **Prioritize consistent sleep:** Across 240,012 MHQ respondents, consistent sleep is associated with **+74.4 MHQ points** via higher daily energy.\n"
-        "- **Limit ultra-processed foods (UPF):** Avoiding daily UPF consumption correlates with **+68.6 MHQ points** and stronger mood stability.\n"
-        "- **Build daily movement & social routines:** Daily exercise (**+45.6 pts**) and regular socializing (**+40.9 pts**) are top modifiable levers beyond static demographics."
-    )
-    try:
-        api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
-    except Exception:
-        api_key = os.getenv("GEMINI_API_KEY")
+def _get_gemini_api_key() -> str | None:
+    """Check common secret/env key names safely without raising FileNotFoundError."""
+    for key_name in ("GEMINI_API_KEY", "GOOGLE_API_KEY", "API_KEY"):
+        try:
+            val = st.secrets.get(key_name)
+            if val:
+                return str(val).strip()
+        except Exception:
+            pass
+        env_val = os.getenv(key_name)
+        if env_val:
+            return env_val.strip()
+    return None
 
+
+def get_ai_wellbeing_advice(age: str, sex: str, income: str, predicted_mhq: float, tier_label: str) -> tuple[str, str, list[tuple[str, str]], str]:
+    """Generate MHQ-tier-refined tips using Gemini + Google Search Grounding, with a 5-tier research fallback."""
+    delta = predicted_mhq - STUDY_MEAN_MHQ
+    age_context = (
+        "Young adults (18–24) show the widest gap in our dataset (mean 23.12 at age 18 vs. 101.99 at 65–74), "
+        "making sleep stability, nutrition, and social routines especially high-leverage."
+        if age in ("18", "19", "20", "21-24")
+        else (
+            "Mid-life cohorts balance career, financial, and family load; structured recovery habits "
+            "help protect cognitive clarity and emotional resilience."
+            if age in ("25-34", "35-44", "45-54")
+            else "Older adult cohorts typically show stronger emotional resilience and lower hopelessness; "
+            "consistent movement and community engagement sustain cognitive sharpness."
+        )
+    )
+
+    tier_guidance = {
+        "Distressed": (
+            "- **Seek structured professional & peer support early:** Scores below −50 signal high functional distress; connecting with a qualified counselor or trusted support network is the highest-priority step.\n"
+            "- **Stabilize core sleep-wake rhythm (+74.4 MHQ pts):** Start with one fixed wake-up time and reduced late-night screen exposure to rebuild baseline daily energy.\n"
+            "- **Reduce inflammatory dietary stressors (+68.6 pts):** Swapping daily ultra-processed snacks for whole foods measurably supports mood regulation.",
+            f"evidence based mental wellbeing recovery tips high distress age {age}",
+        ),
+        "Struggling": (
+            "- **Rebuild sleep consistency first (+74.4 MHQ pts):** In our 240,012-row dataset, regular sleep lifts energy (5.09 → 6.86) and counters hopelessness.\n"
+            "- **Cut daily ultra-processed food intake (+68.6 pts):** Reducing packaged snacks and sugary drinks is strongly linked to steadier daily mood.\n"
+            "- **Add low-friction daily movement (+45.6 pts):** Even a 20-minute brisk walk outdoors helps break rumination and restore focus.",
+            f"evidence based coping strategies improving low mental wellbeing energy sleep age {age}",
+        ),
+        "Managing / Enduring": (
+            "- **Upgrade sleep from inconsistent to regular (+74.4 MHQ pts):** Moving into consistent restorative sleep is the single largest modifiable lever in our MHQ dataset.\n"
+            "- **Audit ultra-processed food frequency (+68.6 pts):** Replacing daily UPF meals with minimally processed foods lifts cognitive clarity and mood.\n"
+            "- **Schedule weekly in-person social time (+40.9 pts) & daily exercise (+45.6 pts):** Because Social Self is the least predictable domain from demographics (R² = 0.1013), intentional social habits create outsized gains.",
+            f"science backed daily habits to move from managing to thriving mental wellbeing age {age}",
+        ),
+        "Succeeding": (
+            "- **Protect sleep & recovery boundaries (+74.4 MHQ pts):** Maintain consistent sleep timing to keep cognitive performance and drive high.\n"
+            "- **Deepen active exercise & whole-food nutrition (+45.6 to +68.6 pts):** Combining daily movement with low-UPF nutrition sustains high energy (7.06 mean).\n"
+            "- **Invest in meaningful social connectedness (+40.9 pts):** Strong interpersonal ties buffer against unexpected life stressors.",
+            f"evidence based strategies sustain high mental wellbeing cognitive resilience age {age}",
+        ),
+        "Thriving": (
+            "- **Sustain your core protective habits:** Continue prioritizing consistent sleep, whole-food nutrition, and daily physical activity to preserve your thriving baseline.\n"
+            "- **Channel energy into purpose & mentoring (+40.9 pts):** High-wellbeing cohorts benefit from community contribution and deep social ties.\n"
+            "- **Monitor early stress signals:** Periodic check-ins help maintain resilience during major life or career transitions.",
+            f"positive psychology habits to maintain thriving mental wellbeing longevity age {age}",
+        ),
+    }
+
+    tier_bullets, search_query = tier_guidance.get(tier_label, tier_guidance["Managing / Enduring"])
+    google_search_url = f"https://www.google.com/search?q={urllib.parse.quote_plus(search_query)}"
+
+    default_sources = [
+        ("Global Mind Project: Causal Mental Health Findings (PMC)", "https://pmc.ncbi.nlm.nih.gov/articles/PMC10910083/"),
+        ("MHQ Validation Study — JMIR Mental Health (PMC)", "https://pmc.ncbi.nlm.nih.gov/articles/PMC9069309/"),
+        ("Machine Learning in Human Wellbeing — Scientific Reports", "https://pmc.ncbi.nlm.nih.gov/articles/PMC11723942/"),
+    ]
+
+    fallback = (
+        f"**Profile Context ({age} · {sex} · {income}):** Predicted MHQ is **{predicted_mhq:.1f}** "
+        f"({delta:+.1f} vs. study mean 67.65; **{tier_label}** tier). {age_context}\n\n"
+        f"**Refined {tier_label}-Tier Action Plan (N = 240,012):**\n{tier_bullets}"
+    )
+
+    api_key = _get_gemini_api_key()
+    if not api_key:
+        return fallback, "🧠 MHQ Research Intelligence Engine", default_sources, google_search_url
+
+    try:
+        from google import genai
+        from google.genai import types
+
+        prompt = (
+            "You are a concise, evidence-based mental well-being research assistant for an MHQ dashboard (N=240,012). "
+            f"User Profile: Age {age}, Biological Sex {sex}, Household Income {income}. "
+            f"Predicted MHQ Score: {predicted_mhq:.1f} ({delta:+.1f} vs. study mean 67.65; {tier_label} tier on -100 to +200 scale). "
+            "Use Google Search to retrieve current, reputable public-health or peer-reviewed psychology guidance specifically suited for "
+            f"an adult aged {age} in the '{tier_label}' mental well-being tier. "
+            "Return a crisp, non-clinical 3-bullet action plan (under 140 words) that blends live evidence with our dataset's top levers "
+            "(sleep consistency +74.4 pts, limiting ultra-processed foods +68.6 pts, daily exercise +45.6 pts, socializing +40.9 pts)."
+        )
+        client = genai.Client(api_key=api_key)
+
+        # Primary: Gemini 2.5 Flash grounded with live Google Search
+        try:
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    tools=[types.Tool(google_search=types.GoogleSearch())],
+                ),
+            )
+            if response and getattr(response, "text", None):
+                grounded_links = []
+                try:
+                    cand = response.candidates[0]
+                    meta = getattr(cand, "grounding_metadata", None)
+                    chunks = getattr(meta, "grounding_chunks", None) or []
+                    for ch in chunks:
+                        web = getattr(ch, "web", None)
+                        if web and getattr(web, "uri", None):
+                            title = getattr(web, "title", None) or "Google Search Source"
+                            grounded_links.append((title, web.uri))
+                except Exception:
+                    pass
+                final_links = grounded_links[:4] if grounded_links else default_sources
+                return response.text.strip(), "🌐 Live Gemini AI + Google Search Grounding", final_links, google_search_url
+        except Exception:
+            # Graceful retry without grounding tool if key tier restricts search tool
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt,
+            )
+            if response and getattr(response, "text", None):
+                return response.text.strip(), "🤖 Live Gemini AI Coach", default_sources, google_search_url
+
+        return fallback, "🧠 MHQ Research Intelligence Engine", default_sources, google_search_url
+    except Exception:
+        return fallback, "🧠 MHQ Research Intelligence Engine", default_sources, google_search_url
+
+
+def ask_research_paper_ai(question: str) -> tuple[str, bool]:
+    """Answer examiner or user questions about the MHQ study via Gemini API or local research knowledge engine."""
+    q = question.lower().strip()
+    if any(k in q for k in ("r2", "r²", "accuracy", "13.48", "13.5", "weak", "low", "rmse")):
+        fallback = (
+            "**Why is R² = 0.1348 (13.48%)?** Using only 3 static demographic inputs (Age, Biological Sex, Household Income), "
+            "our out-of-sample R² of **0.1348** (RMSE = **67.24**) sits directly inside the **0.10–0.15 benchmark** established by "
+            "Oparina et al. (2025) in *Nature Scientific Reports* across over 1 million respondents. It demonstrates that demographics "
+            "set a real population baseline, while ~86.5% of individual well-being is driven by modifiable lifestyle, sleep, and social factors."
+        )
+    elif any(k in q for k in ("age", "income", "sex", "strongest", "important", "anova", "chi")):
+        fallback = (
+            "**Which factor matters most?** **Age** is by far the strongest demographic predictor: One-Way ANOVA gives "
+            "**Age F = 3,176.39** (p < 0.0001), which is **5.4× larger than Biological Sex (F = 586.09)** and **48.1× larger than "
+            "Household Income (F = 66.07)**. The top 3 Random Forest features (`age_18`, `age_65-74`, `age_55-64`) account for **57.7%** "
+            "of model importance, and Chi-Square (χ² = 1,666.66, df = 60, p < 0.0001) proves Biological Sex and Income are statistically dependent."
+        )
+    elif any(k in q for k in ("86.5", "remaining", "lifestyle", "direct", "indirect", "sleep", "food", "upf", "exercise")):
+        fallback = (
+            "**What drives the remaining 86.5%?** Direct negative symptom correlates include sadness/hopelessness (r = −0.72), "
+            "confusion (r = −0.72), and daily ultra-processed food (**−68.6 MHQ pts**). Indirect lifestyle pathways—consistent sleep "
+            "(**+74.4 pts** via higher energy), employment stability (**+76.7 pts**), daily exercise (**+45.6 pts**), and socializing "
+            "(**+40.9 pts**)—explain far more variation than static demographics alone."
+        )
+    else:
+        fallback = (
+            "**MHQ Study Summary (N = 240,012 · 207 Variables):** Mean MHQ is **67.65** (SD = **71.97**, scale −100 to +200). "
+            "One-Way ANOVA confirms significant gaps by Age (F = 3,176.39), Biological Sex (F = 586.09), and INR Income (F = 66.07, "
+            "peaking at INR 85L–2.1Cr = 108.33 before dipping to 90.99 above 2.1Cr). Our 100-tree Random Forest achieves **R² = 0.1348** "
+            "overall, with Cognition (**R² = 0.1356**) most predictable and Social Self (**R² = 0.1013**) least predictable."
+        )
+
+    api_key = _get_gemini_api_key()
     if not api_key:
         return fallback, False
 
     try:
         from google import genai
-        prompt = (
-            "You are a concise, supportive mental well-being research assistant for an academic MHQ dashboard. "
-            f"A user (Age: {age}, Biological Sex: {sex}, Household Income: {income}) received a predicted "
-            f"MHQ score of {predicted_mhq:.1f} ({tier_label} tier on a -100 to +200 scale; study average 67.65). "
-            "Provide 3 brief, practical, non-clinical lifestyle tips grounded in sleep consistency (+74.4 pts), "
-            "limiting ultra-processed foods (+68.6 pts), daily exercise (+45.6 pts), and social connection (+40.9 pts). "
-            "Keep the total response under 110 words."
+        context_prompt = (
+            "You are the AI research assistant for Hitesh Rajpal's MHQ Research & Well-Being Dashboard (N=240,012 rows, 207 columns). "
+            "Verified study facts: Mean MHQ=67.65 (SD=71.97, range -100 to +200). Random Forest (100 trees, max_depth=10, 80/20 split): "
+            "Overall R²=0.1348 (RMSE=67.24), Cognition R²=0.1356, Adapt & Resilience R²=0.1281, Drive & Motivation R²=0.1137, Social Self R²=0.1013. "
+            "Oparina et al. (2025, Nature Scientific Reports) benchmark: restricted demographic models yield R²=0.10-0.15. "
+            "ANOVA: Age F=3,176.39, Biological Sex F=586.09, Income F=66.07 (all p<0.0001). Chi-Square (Sex x Income): χ²=1,666.66, df=60, p=7.26e-309. "
+            "Top features: age_18 (25.98%), age_65-74 (16.60%), age_55-64 (15.12%). Raw gender was 100% null -> replaced with biological_sex (239,995 valid). "
+            "INR income peaks at 85L-2.1Cr (108.33) and dips to 90.99 (>2.1Cr). Direct correlates: social_self (+0.91), sad_hopeless (-0.72), daily UPF (-68.6 pts). "
+            "Indirect pathways: Age 18->65-74 (+78.9 pts), Sleep (+74.4 pts), Employment (+76.7 pts), Exercise (+45.6 pts), Socializing (+40.9 pts). "
+            f"Answer this question concisely in 3-4 sentences using ONLY these verified facts: {question}"
         )
         client = genai.Client(api_key=api_key)
         response = client.models.generate_content(
             model="gemini-2.5-flash",
-            contents=prompt,
+            contents=context_prompt,
         )
         if response and getattr(response, "text", None):
             return response.text.strip(), True
@@ -408,11 +590,23 @@ def render_prediction_results(selected_age: str, selected_sex: str, selected_inc
         )
 
     st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
-    if st.button("✨ Generate AI Well-Being Insights", key=f"ai_btn_{key_prefix}_{selected_age}_{selected_sex}_{selected_income}"):
-        with st.spinner("Generating personalized research-backed tips..."):
-            advice_text, used_live_ai = get_ai_wellbeing_advice(selected_age, selected_sex, selected_income, pred, tier)
-        badge = "🤖 Live Gemini AI Coach" if used_live_ai else "📊 Research Dataset Fallback (Add GEMINI_API_KEY in Secrets for Live AI)"
-        st.info(f"{badge}\n\n{advice_text}")
+    if st.button("🌐 Generate Search-Refined Well-Being Plan", type="primary", key=f"ai_btn_{key_prefix}_{selected_age}_{selected_sex}_{selected_income}"):
+        with st.spinner("Retrieving MHQ-tier-refined guidance & verified sources..."):
+            advice_text, badge_label, source_links, google_search_url = get_ai_wellbeing_advice(
+                selected_age, selected_sex, selected_income, pred, tier
+            )
+        st.markdown(
+            f'<div class="ai-coach-card"><div class="ai-badge">{badge_label}</div></div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(advice_text)
+        if source_links:
+            links_md = " · ".join(f"[{t}]({u})" for t, u in source_links)
+            st.caption(f"📚 **Sources & References:** {links_md}")
+        st.link_button(
+            f"🔍 Explore More Google Research for {tier} Tier (Age {selected_age})",
+            google_search_url,
+        )
 
 
 if active == "prediction":
@@ -742,6 +936,23 @@ elif active == "paper":
                 file_name="research_paper.html",
                 mime="text/html",
             )
+
+    with st.expander("🤖 Ask the MHQ Research Paper (Interactive Viva Q&A)", expanded=True):
+        q_c1, q_c2, q_c3 = st.columns(3)
+        preset_q = None
+        if q_c1.button("Why is R² only 0.1348?", use_container_width=True):
+            preset_q = "Why is R² only 0.1348?"
+        if q_c2.button("Age vs. Sex vs. Income?", use_container_width=True):
+            preset_q = "Which factor matters most: Age, Sex, or Income?"
+        if q_c3.button("What drives the other 86.5%?", use_container_width=True):
+            preset_q = "What drives the remaining 86.5% of MHQ variance?"
+        custom_q = st.text_input("Or type any question about the study:", placeholder="e.g., How does household income affect MHQ scores?")
+        active_q = preset_q or (custom_q.strip() if custom_q and custom_q.strip() else None)
+        if active_q:
+            with st.spinner("Searching verified MHQ study findings..."):
+                ans_text, used_live = ask_research_paper_ai(active_q)
+            badge_q = "🤖 Live Gemini AI" if used_live else "🧠 MHQ Research Intelligence Engine"
+            st.info(f"**{badge_q}**\n\n{ans_text}")
     st.markdown(
         """
 ### Abstract (In Plain English)
