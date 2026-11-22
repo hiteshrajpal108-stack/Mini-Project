@@ -250,6 +250,44 @@ def mhq_category(score: float) -> str:
     return "Distressed"
 
 
+def get_ai_wellbeing_advice(age: str, sex: str, income: str, predicted_mhq: float, tier_label: str) -> tuple[str, bool]:
+    """Generate personalized lifestyle advice via Gemini API with safe offline fallback."""
+    fallback = (
+        f"**Research-Backed Well-Being Guidance ({tier_label} Tier · Predicted MHQ {predicted_mhq:.1f}):**\n\n"
+        "- **Prioritize consistent sleep:** Across 240,012 MHQ respondents, consistent sleep is associated with **+74.4 MHQ points** via higher daily energy.\n"
+        "- **Limit ultra-processed foods (UPF):** Avoiding daily UPF consumption correlates with **+68.6 MHQ points** and stronger mood stability.\n"
+        "- **Build daily movement & social routines:** Daily exercise (**+45.6 pts**) and regular socializing (**+40.9 pts**) are top modifiable levers beyond static demographics."
+    )
+    try:
+        api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
+    except Exception:
+        api_key = os.getenv("GEMINI_API_KEY")
+
+    if not api_key:
+        return fallback, False
+
+    try:
+        from google import genai
+        prompt = (
+            "You are a concise, supportive mental well-being research assistant for an academic MHQ dashboard. "
+            f"A user (Age: {age}, Biological Sex: {sex}, Household Income: {income}) received a predicted "
+            f"MHQ score of {predicted_mhq:.1f} ({tier_label} tier on a -100 to +200 scale; study average 67.65). "
+            "Provide 3 brief, practical, non-clinical lifestyle tips grounded in sleep consistency (+74.4 pts), "
+            "limiting ultra-processed foods (+68.6 pts), daily exercise (+45.6 pts), and social connection (+40.9 pts). "
+            "Keep the total response under 110 words."
+        )
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+        )
+        if response and getattr(response, "text", None):
+            return response.text.strip(), True
+        return fallback, False
+    except Exception:
+        return fallback, False
+
+
 model = load_model()
 if model is None:
     st.error("`mhq_model.joblib` was not found in the app directory.")
@@ -299,7 +337,7 @@ st.markdown(
 
 active = st.session_state.active_page
 
-def render_prediction_results(selected_age: str, selected_sex: str, selected_income: str):
+def render_prediction_results(selected_age: str, selected_sex: str, selected_income: str, key_prefix: str = "pred"):
     pred = predict_mhq(model, selected_age, selected_sex, selected_income)
     delta = pred - STUDY_MEAN_MHQ
     tier = mhq_category(pred)
@@ -369,6 +407,13 @@ def render_prediction_results(selected_age: str, selected_sex: str, selected_inc
             unsafe_allow_html=True,
         )
 
+    st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
+    if st.button("✨ Generate AI Well-Being Insights", key=f"ai_btn_{key_prefix}_{selected_age}_{selected_sex}_{selected_income}"):
+        with st.spinner("Generating personalized research-backed tips..."):
+            advice_text, used_live_ai = get_ai_wellbeing_advice(selected_age, selected_sex, selected_income, pred, tier)
+        badge = "🤖 Live Gemini AI Coach" if used_live_ai else "📊 Research Dataset Fallback (Add GEMINI_API_KEY in Secrets for Live AI)"
+        st.info(f"{badge}\n\n{advice_text}")
+
 
 if active == "prediction":
     if "pred_mode" not in st.session_state:
@@ -418,7 +463,7 @@ if active == "prediction":
 
         st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
         _, p_age, p_sex, p_inc = PRESETS[st.session_state.active_preset]
-        render_prediction_results(p_age, p_sex, p_inc)
+        render_prediction_results(p_age, p_sex, p_inc, key_prefix="preset")
 
     elif st.session_state.pred_mode == "custom":
         st.markdown("### 🎯 Custom Demographic Prediction")
@@ -439,7 +484,11 @@ if active == "prediction":
 
         st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
         if st.button("✨ Predict MHQ Score", type="primary"):
-            render_prediction_results(selected_age, selected_sex, selected_income)
+            st.session_state.custom_pred_profile = (selected_age, selected_sex, selected_income)
+
+        if st.session_state.get("custom_pred_profile"):
+            c_age, c_sex, c_inc = st.session_state.custom_pred_profile
+            render_prediction_results(c_age, c_sex, c_inc, key_prefix="custom")
 
     elif st.session_state.pred_mode == "compare":
         st.markdown("### ⚖️ Compare Two Profiles (Profile A vs. Profile B)")
