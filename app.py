@@ -433,6 +433,16 @@ def ask_research_paper_ai(question: str) -> tuple[str, bool]:
             "(**+74.4 pts** via higher energy), employment stability (**+76.7 pts**), daily exercise (**+45.6 pts**), and socializing "
             "(**+40.9 pts**)—explain far more variation than static demographics alone."
         )
+    elif any(k in q for k in ("loneliness", "inventory", "medical", "permut", "future", "social self", "li")):
+        fallback = (
+            "**Future Scope: Loneliness Inventory (LI) Cross-Scale Permutation Validation:** "
+            "While `social_self_score` exhibits the strongest direct Pearson correlation with overall MHQ (r = +0.9136), "
+            "it has the lowest demographic predictability (R² = 0.1013, RMSE = 72.52). Young adults aged 18 have "
+            "the lowest baseline MHQ (23.12 vs. 101.99 for ages 65–74), while frequent socializing provides a +40.9 point gain. "
+            "To bridge this gap, proposed future work co-administers the 19-item Loneliness Inventory (LI; Uma & Krishnan, 2010, Psychotronics Publications) "
+            "with MHQ across medical student cohorts (ages 18–24), applies 5→1 reverse-scoring to the 8 connectedness items (theoretical score range 19–95), "
+            "and conducts 10,000-iteration non-parametric permutation tests to derive exact distribution-free p-values."
+        )
     else:
         fallback = (
             "**MHQ Study Summary (N = 240,012 · 207 Variables):** Mean MHQ is **67.65** (SD = **71.97**, scale −100 to +200). "
@@ -456,6 +466,11 @@ def ask_research_paper_ai(question: str) -> tuple[str, bool]:
             "Top features: age_18 (25.98%), age_65-74 (16.60%), age_55-64 (15.12%). Raw gender was 100% null -> replaced with biological_sex (239,995 valid). "
             "INR income peaks at 85L-2.1Cr (108.33) and dips to 90.99 (>2.1Cr). Direct correlates: social_self (+0.91), sad_hopeless (-0.72), daily UPF (-68.6 pts). "
             "Indirect pathways: Age 18->65-74 (+78.9 pts), Sleep (+74.4 pts), Employment (+76.7 pts), Exercise (+45.6 pts), Socializing (+40.9 pts). "
+            "Future Scope extension: Cross-Scale Permutation Validation co-administers Uma & Krishnan's (2010, Psychotronics Publications) 19-item Loneliness Inventory (LI) "
+            "in medical college cohorts (ages 18-24). Rationale: social_self_score has strongest direct correlation with MHQ (r=+0.9136) but lowest demographic R² (0.1013, RMSE=72.52); "
+            "age 18 has lowest mean MHQ (23.12); socializing yields +40.9 pts. LI items: 11 direct isolation items (1->5) and 8 positive connectedness items reverse-scored "
+            "(5->1; items 1,5,6,9,14,16,18,19), yielding theoretical range 19-95. Protocol executes 10,000 non-parametric permutation iterations for exact distribution-free "
+            "p-values in institutional cohorts (n=100-500) and SHAP explainability to target Oparina et al.'s ~0.30 survey ceiling. "
             f"Answer this question concisely in 3-4 sentences using ONLY these verified facts: {question}"
         )
         client = genai.Client(api_key=api_key)
@@ -938,14 +953,16 @@ elif active == "paper":
             )
 
     with st.expander("🤖 Ask the MHQ Research Paper (Interactive Viva Q&A)", expanded=True):
-        q_c1, q_c2, q_c3 = st.columns(3)
+        q_c1, q_c2, q_c3, q_c4 = st.columns(4)
         preset_q = None
         if q_c1.button("Why is R² only 0.1348?", use_container_width=True):
             preset_q = "Why is R² only 0.1348?"
         if q_c2.button("Age vs. Sex vs. Income?", use_container_width=True):
             preset_q = "Which factor matters most: Age, Sex, or Income?"
-        if q_c3.button("What drives the other 86.5%?", use_container_width=True):
+        if q_c3.button("What drives other 86.5%?", use_container_width=True):
             preset_q = "What drives the remaining 86.5% of MHQ variance?"
+        if q_c4.button("Loneliness Inventory (LI)?", use_container_width=True):
+            preset_q = "How does the Loneliness Inventory (LI) cross-scale permutation validation address the Social Self paradox in medical cohorts?"
         custom_q = st.text_input("Or type any question about the study:", placeholder="e.g., How does household income affect MHQ scores?")
         active_q = preset_q or (custom_q.strip() if custom_q and custom_q.strip() else None)
         if active_q:
@@ -953,6 +970,18 @@ elif active == "paper":
                 ans_text, used_live = ask_research_paper_ai(active_q)
             badge_q = "🤖 Live Gemini AI" if used_live else "🧠 MHQ Research Intelligence Engine"
             st.info(f"**{badge_q}**\n\n{ans_text}")
+
+    with st.expander("🔮 Future Scope: Medical College Loneliness Inventory (LI) Cross-Validation", expanded=False):
+        st.markdown(
+            """
+**Resolving the Social Self Paradox through Psychometric Cross-Validation:**
+
+- **The Empirical Paradox:** `social_self_score` exhibits the strongest direct Pearson correlation with overall MHQ ($r = +0.9136$), yet records the lowest predictability from demographic features ($R^2 = 0.1013$, $\\text{RMSE} = 72.52$). Furthermore, 18-year-old college entrants record the lowest cohort MHQ ($23.12$ vs. $101.99$ for ages 65–74; $+78.9$ point gap), while frequent socializing delivers a $+40.9$-point MHQ gain.
+- **19-Item Loneliness Inventory (LI) Instrument:** Developed by Uma & Prof. Krishnan K. (2010, *Psychotronics Publications*) for Indian collegiate and medical cohorts. Consists of 11 direct isolation items (scored $1 \\to 5$) and 8 positive connectedness / instrumental support items (Items 1, 5, 6, 9, 14, 16, 18, 19—reverse-scored $5 \\to 1$), yielding a theoretical range of $19$ (lowest loneliness) to $95$ (highest loneliness).
+- **10,000-Iteration Permutation Protocol:** Co-administering LI and MHQ across anonymized medical students (ages 18–24) with institutional ethics approval. Non-parametric permutation testing ($10{,}000$ label resamples) computes exact, distribution-free $p$-values between total LI scores and MHQ targets, remaining robust for small sample sizes ($n = 100\\text{--}500$) without assuming bivariate normality.
+- **Ensemble Integration:** Adding LI sub-constructs alongside sleep, UPF diet, and exercise into Random Forest / Gradient Boosting models with SHAP attribution to benchmark against the $\\sim 0.30$ survey predictability ceiling established by Oparina et al. (2025).
+"""
+        )
     st.markdown(
         """
 ### Abstract (In Plain English)
