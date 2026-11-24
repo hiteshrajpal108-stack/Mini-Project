@@ -1,4 +1,6 @@
+import base64
 import os
+import re
 import urllib.parse
 import joblib
 import numpy as np
@@ -674,6 +676,24 @@ def render_prediction_results(selected_age: str, selected_sex: str, selected_inc
         )
 
 
+@st.cache_data(show_spinner=False)
+def load_research_paper_html(paper_path: str, assets_dir: str) -> str:
+    """Load Research_Paper_Interactive.html and inline local assets as base64 data URIs for iframe viewing."""
+    with open(paper_path, "r", encoding="utf-8") as f:
+        html_str = f.read()
+
+    def _replace_src(match: re.Match) -> str:
+        rel_path = match.group(1)
+        img_path = os.path.join(assets_dir, os.path.basename(rel_path))
+        if os.path.exists(img_path):
+            with open(img_path, "rb") as img_f:
+                b64 = base64.b64encode(img_f.read()).decode("ascii")
+            return f'src="data:image/png;base64,{b64}"'
+        return match.group(0)
+
+    return re.sub(r'src="(assets/[^"]+\.png)"', _replace_src, html_str)
+
+
 if active == "prediction":
     if "pred_mode" not in st.session_state:
         st.session_state.pred_mode = "custom"
@@ -993,14 +1013,27 @@ elif active == "model":
 elif active == "paper":
     st.subheader("📄 Predicting Mental Health Questionnaire (MHQ) Scores from Demographic Factors")
     paper_html_path = os.path.join(BASE_DIR, "Research_Paper_Interactive.html")
+    if "show_paper_viewer" not in st.session_state:
+        st.session_state["show_paper_viewer"] = False
+
     if os.path.exists(paper_html_path):
-        with open(paper_html_path, "rb") as pf:
-            st.download_button(
-                label="⬇️ Download Research Paper",
-                data=pf.read(),
-                file_name="research_paper.html",
-                mime="text/html",
-            )
+        viewer_html = load_research_paper_html(paper_html_path, os.path.join(BASE_DIR, "assets"))
+        act_c1, act_c2, _ = st.columns([1.2, 1.2, 2.6])
+        toggle_label = "✖️ Close Paper Viewer" if st.session_state["show_paper_viewer"] else "👁️ View Full Interactive Paper"
+        if act_c1.button(toggle_label, type="primary", use_container_width=True):
+            st.session_state["show_paper_viewer"] = not st.session_state["show_paper_viewer"]
+            st.rerun()
+        act_c2.download_button(
+            label="⬇️ Download Research Paper",
+            data=viewer_html.encode("utf-8"),
+            file_name="research_paper.html",
+            mime="text/html",
+            use_container_width=True,
+        )
+
+        if st.session_state["show_paper_viewer"]:
+            st.caption("Interactive full-text reader with clickable Table of Contents, figures, and glossary.")
+            components.html(viewer_html, height=820, scrolling=True)
 
     with st.expander("🤖 Ask the MHQ Research Paper (Interactive Viva Q&A)", expanded=True):
         q_c1, q_c2, q_c3, q_c4 = st.columns(4)
