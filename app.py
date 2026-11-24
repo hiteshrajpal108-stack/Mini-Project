@@ -20,110 +20,138 @@ st.set_page_config(
 PLOTLY_LAYOUT = dict(
     template="plotly_dark",
     paper_bgcolor="rgba(0,0,0,0)",
-    plot_bgcolor="rgba(15,23,42,0.45)",
-    font=dict(family="Plus Jakarta Sans, sans-serif", color="#e2e8f0"),
-    margin=dict(l=20, r=20, t=48, b=20),
+    plot_bgcolor="rgba(0,0,0,0)",
+    font=dict(family="Inter, Plus Jakarta Sans, sans-serif", color="#e2e8f0"),
+    margin=dict(l=20, r=20, t=48, b=24),
+    hoverlabel=dict(
+        bgcolor="#0f172a",
+        bordercolor="rgba(45, 212, 191, 0.45)",
+        font=dict(color="#f8fafc", family="Inter, sans-serif"),
+    ),
 )
 
-# Custom UI/UX styling: modern vertical sidebar nav buttons, glass cards, and crisp typography
+
+def style_plotly(fig, **layout_kwargs):
+    """Apply cohesive dark-glass styling and subtle gridlines to any Plotly figure."""
+    fig.update_layout(**PLOTLY_LAYOUT, **layout_kwargs)
+    fig.update_xaxes(gridcolor="rgba(255,255,255,0.06)", zerolinecolor="rgba(255,255,255,0.10)")
+    fig.update_yaxes(gridcolor="rgba(255,255,255,0.06)", zerolinecolor="rgba(255,255,255,0.10)")
+    return fig
+
+# Custom UI/UX styling: modern dark-glass research dashboard
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
-    /* Smooth scrolling & custom thin scrollbar (no rerun flicker) */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
+
+    /* Clean Streamlit chrome while keeping sidebar expand/collapse accessible */
+    #MainMenu, footer, [data-testid="stToolbar"] { visibility: hidden !important; }
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+    }
+
     html, .stApp, section.main {
         scroll-behavior: smooth;
     }
     ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
-    ::-webkit-scrollbar-thumb { background: rgba(45, 212, 191, 0.32); border-radius: 999px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(45, 212, 191, 0.55); }
-    /* Main background & header polish */
+    ::-webkit-scrollbar-track { background: #090d16; }
+    ::-webkit-scrollbar-thumb { background: rgba(45, 212, 191, 0.28); border-radius: 999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(45, 212, 191, 0.5); }
+
+    /* Deep obsidian/slate background */
     .stApp {
-        background: radial-gradient(circle at top right, #0f292e 0%, #0f172a 45%, #090d16 100%);
-        font-family: 'Plus Jakarta Sans', sans-serif;
+        background: radial-gradient(ellipse at 85% 0%, #131b2e 0%, #0b1120 45%, #090d16 100%);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        color: #e2e8f0;
     }
-    /* Sidebar vertical panel styling */
+
+    /* Sidebar glass panel */
     section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0b1320 0%, #0f172a 100%);
-        border-right: 1px solid rgba(20, 184, 166, 0.22);
+        background: linear-gradient(180deg, #0b111e 0%, #090d16 100%);
+        border-right: 1px solid rgba(255, 255, 255, 0.08);
     }
-    /* Clickable vertical navigation buttons */
+
+    /* Vertical navigation items */
     section[data-testid="stSidebar"] .stButton > button {
         width: 100%;
         text-align: left;
         justify-content: flex-start;
-        padding: 0.72rem 1rem;
-        border-radius: 12px;
-        border: 1px solid rgba(148, 163, 184, 0.16);
-        background: rgba(30, 41, 59, 0.55);
-        color: #e2e8f0;
-        font-weight: 600;
-        font-size: 0.95rem;
-        transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
-        margin-bottom: 0.35rem;
+        padding: 0.68rem 0.95rem;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        background: rgba(255, 255, 255, 0.02);
+        color: #cbd5e1;
+        font-weight: 500;
+        font-size: 0.92rem;
+        transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+        margin-bottom: 0.32rem;
     }
     section[data-testid="stSidebar"] .stButton > button:hover {
-        border-color: #14b8a6;
-        background: rgba(13, 148, 136, 0.18);
-        color: #5eead4;
-        transform: translateX(4px);
+        border-color: rgba(45, 212, 191, 0.45);
+        background: rgba(20, 184, 166, 0.10);
+        color: #f8fafc;
+        transform: translateX(3px);
     }
     section[data-testid="stSidebar"] .stButton > button[kind="primary"] {
-        background: linear-gradient(90deg, #0d9488 0%, #14b8a6 100%);
-        border-color: #2dd4bf;
+        background: linear-gradient(90deg, rgba(13, 148, 136, 0.28) 0%, rgba(14, 165, 233, 0.16) 100%);
+        border: 1px solid rgba(45, 212, 191, 0.55);
+        border-left: 3px solid #2dd4bf;
         color: #ffffff;
-        box-shadow: 0 4px 16px rgba(20, 184, 166, 0.28);
+        font-weight: 600;
+        box-shadow: 0 4px 16px rgba(13, 148, 136, 0.18);
     }
-    /* Secondary action buttons in main content (preset Q&A, pills) */
+
+    /* Secondary buttons */
     [data-testid="stMain"] .stButton > button[kind="secondary"],
     .main .stButton > button[kind="secondary"] {
-        border-radius: 12px;
-        border: 1px solid rgba(45, 212, 191, 0.24);
-        background: rgba(30, 41, 59, 0.62);
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        background: rgba(255, 255, 255, 0.03);
         color: #e2e8f0;
-        font-weight: 600;
-        transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+        font-weight: 500;
+        transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
     }
     [data-testid="stMain"] .stButton > button[kind="secondary"]:hover,
     .main .stButton > button[kind="secondary"]:hover {
-        border-color: #2dd4bf;
-        background: rgba(13, 148, 136, 0.22);
+        border-color: rgba(45, 212, 191, 0.5);
+        background: rgba(20, 184, 166, 0.12);
         color: #5eead4;
-        transform: translateY(-2px);
-        box-shadow: 0 6px 18px rgba(13, 148, 136, 0.22);
+        transform: translateY(-1px);
     }
-    /* Expanders & inputs smooth polish */
-    div[data-testid="stExpander"] {
-        border-radius: 14px !important;
-        border: 1px solid rgba(148, 163, 184, 0.18) !important;
-        background: rgba(15, 23, 42, 0.62) !important;
+
+    /* Expanders & form inputs */
+    div[data-testid="stExpander"],
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        border-radius: 16px !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        background: rgba(255, 255, 255, 0.025) !important;
         transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
     div[data-testid="stExpander"]:hover {
-        border-color: rgba(45, 212, 191, 0.38) !important;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+        border-color: rgba(45, 212, 191, 0.30) !important;
     }
     div[data-baseweb="input"] > div,
     div[data-baseweb="select"] > div {
-        border-radius: 12px !important;
+        border-radius: 10px !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
         transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
     }
-    /* Primary action buttons & link buttons in main content */
+
+    /* Primary action buttons & link buttons */
     [data-testid="stMain"] .stButton > button[kind="primary"],
     [data-testid="stMain"] .stDownloadButton > button,
     [data-testid="stMain"] div[data-testid="stLinkButton"] a[kind="primary"],
     .main .stButton > button[kind="primary"],
     .main .stDownloadButton > button,
     .main div[data-testid="stLinkButton"] a[kind="primary"] {
-        border-radius: 12px;
-        padding: 0.6rem 1.25rem;
+        border-radius: 10px;
+        padding: 0.58rem 1.2rem;
         font-weight: 600;
-        background: linear-gradient(90deg, #0d9488 0%, #0ea5e9 100%);
-        border: none;
+        background: linear-gradient(90deg, #0d9488 0%, #0284c7 100%);
+        border: 1px solid rgba(45, 212, 191, 0.35);
         color: #ffffff;
-        box-shadow: 0 4px 14px rgba(13, 148, 136, 0.32);
-        transition: transform 0.18s ease, box-shadow 0.18s ease;
+        box-shadow: 0 4px 14px rgba(13, 148, 136, 0.24);
+        transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
     }
     [data-testid="stMain"] .stButton > button[kind="primary"]:hover,
     [data-testid="stMain"] .stDownloadButton > button:hover,
@@ -132,83 +160,287 @@ st.markdown(
     .main .stDownloadButton > button:hover,
     .main div[data-testid="stLinkButton"] a[kind="primary"]:hover {
         transform: translateY(-1px);
-        box-shadow: 0 6px 20px rgba(20, 184, 166, 0.45);
+        filter: brightness(1.06);
+        box-shadow: 0 6px 20px rgba(20, 184, 166, 0.35);
         color: #ffffff;
     }
-    /* Metric cards with hover lift & accent border */
-    div[data-testid="stMetric"] {
-        background: rgba(30, 41, 59, 0.65);
-        border: 1px solid rgba(148, 163, 184, 0.18);
-        border-left: 4px solid #14b8a6;
+
+    /* Framed Publication Figure Containers (prevents bright white-PNG clash on dark theme) */
+    [data-testid="stMain"] [data-testid="stImage"],
+    .main [data-testid="stImage"] {
+        background: #f8fafc;
+        padding: 14px 14px 10px 14px;
         border-radius: 14px;
-        padding: 14px 18px;
-        backdrop-filter: blur(8px);
-        transition: transform 0.25s ease, box-shadow 0.25s ease;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+        margin-bottom: 10px;
+    }
+    [data-testid="stMain"] [data-testid="stImage"] img,
+    .main [data-testid="stImage"] img {
+        border-radius: 8px;
+    }
+    [data-testid="stMain"] [data-testid="stImageCaption"],
+    .main [data-testid="stImageCaption"] {
+        color: #334155 !important;
+        font-weight: 600 !important;
+        font-size: 0.84rem !important;
+        padding-top: 8px !important;
+    }
+
+    /* Metric cards */
+    div[data-testid="stMetric"] {
+        background: rgba(255, 255, 255, 0.03) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-top: 2px solid #14b8a6 !important;
+        border-radius: 14px !important;
+        padding: 16px 18px !important;
+        backdrop-filter: blur(12px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22) !important;
+        transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s ease !important;
     }
     div[data-testid="stMetric"]:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 10px 26px rgba(13, 148, 136, 0.22);
+        transform: translateY(-2px) !important;
+        border-color: rgba(45, 212, 191, 0.38) !important;
     }
-    .alert-card {
-        padding: 16px 20px;
-        border-radius: 14px;
-        margin-top: 8px;
-        font-size: 0.96rem;
-        line-height: 1.55;
+    div[data-testid="stMetricLabel"] {
+        font-size: 0.74rem !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.06em !important;
+        color: #94a3b8 !important;
+    }
+    div[data-testid="stMetricValue"] {
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 1.75rem !important;
+        font-weight: 700 !important;
+        color: #f8fafc !important;
+        letter-spacing: -0.02em !important;
+    }
+    div[data-testid="stMetricDelta"] {
+        font-family: 'Inter', sans-serif !important;
+        font-weight: 600 !important;
+        font-size: 0.82rem !important;
+    }
+
+    /* Diagnostic Result Card */
+    .diag-card {
+        padding: 20px 22px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        backdrop-filter: blur(12px);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.26);
+        height: 100%;
+    }
+    .diag-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+    .diag-eyebrow {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #94a3b8;
+    }
+    .tier-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+    }
+    .tier-thriving { background: rgba(13, 148, 136, 0.22); border: 1px solid #2dd4bf; color: #5eead4; }
+    .tier-succeeding { background: rgba(34, 197, 94, 0.18); border: 1px solid #4ade80; color: #86efac; }
+    .tier-managing { background: rgba(234, 179, 8, 0.18); border: 1px solid #facc15; color: #fde047; }
+    .tier-struggling { background: rgba(249, 115, 22, 0.20); border: 1px solid #fb923c; color: #fdba74; }
+    .tier-distressed { background: rgba(239, 68, 68, 0.22); border: 1px solid #f87171; color: #fca5a5; }
+    .diag-score {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 2.5rem;
+        font-weight: 800;
         color: #f8fafc;
-        box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
+        line-height: 1.1;
+        margin-bottom: 8px;
     }
-    .alert-thriving { background: linear-gradient(135deg, rgba(13, 148, 136, 0.35), rgba(16, 185, 129, 0.25)); border: 1px solid #2dd4bf; }
-    .alert-succeeding { background: linear-gradient(135deg, rgba(34, 197, 94, 0.28), rgba(14, 165, 233, 0.20)); border: 1px solid #4ade80; }
-    .alert-managing { background: linear-gradient(135deg, rgba(234, 179, 8, 0.28), rgba(245, 158, 11, 0.18)); border: 1px solid #facc15; }
-    .alert-struggling { background: linear-gradient(135deg, rgba(249, 115, 22, 0.30), rgba(239, 68, 68, 0.22)); border: 1px solid #fb923c; }
-    .alert-distressed { background: linear-gradient(135deg, rgba(220, 38, 38, 0.35), rgba(153, 27, 27, 0.28)); border: 1px solid #f87171; }
+    .diag-desc {
+        font-size: 0.92rem;
+        color: #cbd5e1;
+        line-height: 1.55;
+        margin-bottom: 14px;
+    }
+    .diag-meta-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 0.8rem;
+    }
+    .diag-meta-item span { display: block; color: #64748b; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .diag-meta-item strong { color: #e2e8f0; font-family: 'JetBrains Mono', monospace; }
+
+    /* Clean Editorial Hero Header + 4-Column KPI Bento Strip */
     .hero-banner {
-        padding: 28px 32px;
-        border-radius: 18px;
-        background: linear-gradient(120deg, rgba(13, 148, 136, 0.22), rgba(14, 165, 233, 0.14), rgba(167, 139, 250, 0.10));
-        border: 1px solid rgba(45, 212, 191, 0.30);
-        margin-bottom: 42px;
-        text-align: center;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+        padding: 26px 32px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(12px);
+        box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28);
+        margin-bottom: 18px;
+    }
+    .hero-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        background: rgba(20, 184, 166, 0.14);
+        border: 1px solid rgba(45, 212, 191, 0.35);
+        color: #5eead4;
+        margin-bottom: 12px;
+    }
+    .hero-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #2dd4bf;
+        display: inline-block;
     }
     .hero-title {
-        font-family: 'Syne', sans-serif !important;
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
         font-weight: 800 !important;
-        font-size: 2.15rem !important;
-        line-height: 1.3 !important;
-        letter-spacing: -0.02em;
+        font-size: 2.05rem !important;
+        line-height: 1.2 !important;
+        letter-spacing: -0.025em;
         margin: 0;
-        text-align: center;
+        color: #f8fafc;
     }
     .hero-gradient {
-        background: linear-gradient(90deg, #5eead4 0%, #38bdf8 50%, #c4b5fd 100%);
+        background: linear-gradient(90deg, #f8fafc 0%, #5eead4 55%, #38bdf8 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
-    .section-spacer {
-        height: 22px;
+    .hero-subtitle {
+        font-size: 0.94rem;
+        color: #94a3b8;
+        max-width: 820px;
+        margin: 8px 0 0;
+        line-height: 1.55;
     }
-    .ai-coach-card {
-        padding: 20px 24px;
-        border-radius: 16px;
-        background: linear-gradient(135deg, rgba(15, 23, 42, 0.88), rgba(13, 148, 136, 0.14));
-        border: 1px solid rgba(45, 212, 191, 0.35);
-        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
-        color: #e2e8f0;
-        line-height: 1.65;
-        margin-top: 10px;
+
+    /* 4-Column KPI Bento Strip */
+    .bento-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 26px;
     }
+    @media (max-width: 900px) {
+        .bento-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    .bento-card {
+        padding: 14px 18px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(12px);
+    }
+    .bento-lbl {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #64748b;
+        margin-bottom: 4px;
+    }
+    .bento-val {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: #f8fafc;
+        letter-spacing: -0.02em;
+    }
+    .bento-sub {
+        font-size: 0.78rem;
+        color: #94a3b8;
+        margin-top: 2px;
+    }
+
+    /* Sidebar Brand & Metadata */
+    .sidebar-brand-card {
+        padding: 14px 16px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        margin-bottom: 16px;
+    }
+    .sidebar-brand-title {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 1.02rem;
+        font-weight: 800;
+        color: #f8fafc;
+        letter-spacing: -0.01em;
+    }
+    .sidebar-brand-sub {
+        font-size: 0.78rem;
+        color: #94a3b8;
+        margin-top: 2px;
+    }
+    .sidebar-status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 8px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        padding: 2px 9px;
+        border-radius: 999px;
+        background: rgba(20, 184, 166, 0.14);
+        border: 1px solid rgba(45, 212, 191, 0.3);
+        color: #5eead4;
+    }
+    .sidebar-spec-box {
+        margin-top: 18px;
+        padding: 12px 14px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .spec-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.78rem;
+        padding: 5px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .spec-row:last-child { border-bottom: none; }
+    .spec-row span { color: #94a3b8; }
+    .spec-row strong { color: #e2e8f0; font-family: 'JetBrains Mono', monospace; }
+
+    .section-spacer { height: 18px; }
     .ai-badge {
         display: inline-block;
-        padding: 4px 12px;
+        padding: 3px 10px;
         border-radius: 999px;
-        font-size: 0.78rem;
+        font-size: 0.74rem;
         font-weight: 700;
         letter-spacing: 0.03em;
-        margin-bottom: 12px;
-        background: rgba(20, 184, 166, 0.22);
-        border: 1px solid rgba(45, 212, 191, 0.45);
+        margin-bottom: 10px;
+        background: rgba(20, 184, 166, 0.16);
+        border: 1px solid rgba(45, 212, 191, 0.38);
         color: #5eead4;
     }
     </style>
@@ -226,6 +458,7 @@ AGE_COL = "age"
 SEX_COL = "biological_sex"
 INCOME_COL = "income_household"
 STUDY_MEAN_MHQ = 67.65
+STUDY_MEDIAN_MHQ = 77.6
 AGE_ORDER = ["18", "19", "20", "21-24", "25-34", "35-44", "45-54", "55-64", "65-74", "75-84", "85+"]
 
 INCOME_INR_OPTIONS = [
@@ -407,7 +640,7 @@ def get_ai_wellbeing_advice(age: str, sex: str, income: str, predicted_mhq: floa
 
     api_key = _get_gemini_api_key()
     if not api_key:
-        return fallback, "🧠 MHQ Research Intelligence Engine", default_sources, google_search_url
+        return fallback, "Evidence-Based Research Guide", default_sources, google_search_url
 
     try:
         from google import genai
@@ -447,7 +680,7 @@ def get_ai_wellbeing_advice(age: str, sex: str, income: str, predicted_mhq: floa
                 except Exception:
                     pass
                 final_links = grounded_links[:4] if grounded_links else default_sources
-                return response.text.strip(), "🌐 Live Gemini AI + Google Search Grounding", final_links, google_search_url
+                return response.text.strip(), "Gemini + Google Search Grounded", final_links, google_search_url
         except Exception:
             # Graceful retry without grounding tool if key tier restricts search tool
             response = client.models.generate_content(
@@ -455,11 +688,11 @@ def get_ai_wellbeing_advice(age: str, sex: str, income: str, predicted_mhq: floa
                 contents=prompt,
             )
             if response and getattr(response, "text", None):
-                return response.text.strip(), "🤖 Live Gemini AI Coach", default_sources, google_search_url
+                return response.text.strip(), "Gemini Research Assistant", default_sources, google_search_url
 
-        return fallback, "🧠 MHQ Research Intelligence Engine", default_sources, google_search_url
+        return fallback, "Evidence-Based Research Guide", default_sources, google_search_url
     except Exception:
-        return fallback, "🧠 MHQ Research Intelligence Engine", default_sources, google_search_url
+        return fallback, "Evidence-Based Research Guide", default_sources, google_search_url
 
 
 def ask_research_paper_ai(question: str) -> tuple[str, bool]:
@@ -623,10 +856,10 @@ if st.query_params.get("view") == "paper":
 
 # Vertical Sidebar Navigation Panel
 NAV_ITEMS = [
-    ("🎯 Live Prediction", "prediction"),
-    ("📊 Demographic Explorer", "explorer"),
-    ("📈 Model & Statistics", "model"),
-    ("📄 Research Paper", "paper"),
+    ("Live Prediction", "prediction"),
+    ("Demographic Explorer", "explorer"),
+    ("Model & Statistics", "model"),
+    ("Research Paper", "paper"),
 ]
 
 if "active_page" not in st.session_state:
@@ -635,8 +868,17 @@ if "rebuild_nonce" not in st.session_state:
     st.session_state.rebuild_nonce = 1
 
 with st.sidebar:
-    st.markdown("## 🧠 MHQ Navigation")
-    st.caption("Select a workspace view")
+    st.markdown(
+        """
+        <div class="sidebar-brand-card">
+            <div class="sidebar-brand-title">MHQ Research Studio</div>
+            <div class="sidebar-brand-sub">Hitesh Rajpal · Python Mini Project</div>
+            <div class="sidebar-status-pill"><span class="hero-dot"></span>Model v2.4 · Online</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.caption("WORKSPACE")
     for label, key in NAV_ITEMS:
         btn_type = "primary" if st.session_state.active_page == key else "secondary"
         if st.button(label, key=f"nav_{key}", type=btn_type, use_container_width=True):
@@ -644,17 +886,58 @@ with st.sidebar:
             st.session_state.rebuild_nonce += 1
             st.rerun()
 
-    st.divider()
-    enable_swarm = st.toggle("✨ Full-Page Swarm Rebuild", value=False)
-    if st.button("🔄 Replay Page Rebuild", use_container_width=True):
-        st.session_state.rebuild_nonce += 1
-        st.rerun()
+    st.markdown(
+        """
+        <div class="sidebar-spec-box">
+            <div class="spec-row"><span>Dataset</span><strong>240,012 Rows</strong></div>
+            <div class="spec-row"><span>Variables</span><strong>207 Features</strong></div>
+            <div class="spec-row"><span>MHQ Scale</span><strong>−100 to +200</strong></div>
+            <div class="spec-row"><span>Study Mean / Med</span><strong>67.65 / 77.6</strong></div>
+            <div class="spec-row"><span>Random Forest R²</span><strong>0.1348</strong></div>
+            <div class="spec-row"><span>Benchmark</span><strong>Oparina et al.</strong></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-# Clean Hero Banner (removed "Mental Health Questionnaire (MHQ) Study — 240,012 Respondents | Random Forest Pipeline")
+    st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
+    with st.expander("Display Settings", expanded=False):
+        enable_swarm = st.toggle("Page Rebuild Overlay", value=False)
+        if st.button("Replay Animation", use_container_width=True):
+            st.session_state.rebuild_nonce += 1
+            st.rerun()
+
+# Editorial Research Header & 4-Column KPI Bento Strip
 st.markdown(
     """
     <div class="hero-banner">
-        <div class="hero-title">🧠 <span class="hero-gradient">MHQ Research &amp; Well-Being Dashboard</span></div>
+        <div class="hero-eyebrow"><span class="hero-dot"></span>Empirical Study · Global Mind Dataset (N = 240,012)</div>
+        <h1 class="hero-title"><span class="hero-gradient">Mental Health Quotient (MHQ) Explorer</span></h1>
+        <p class="hero-subtitle">
+            Demographic predictability modeling (Random Forest, R² = 0.1348) and behavioral mediation analysis across 207 variables, paired with a Loneliness Inventory (LI) cross-validation protocol.
+        </p>
+    </div>
+    <div class="bento-grid">
+        <div class="bento-card">
+            <div class="bento-lbl">Dataset Scale</div>
+            <div class="bento-val">240,012</div>
+            <div class="bento-sub">Adult records · 207 variables</div>
+        </div>
+        <div class="bento-card">
+            <div class="bento-lbl">Model Accuracy (R²)</div>
+            <div class="bento-val">0.1348</div>
+            <div class="bento-sub">13.48% variance · RMSE 67.24</div>
+        </div>
+        <div class="bento-card">
+            <div class="bento-lbl">Study Baseline</div>
+            <div class="bento-val">67.65 Mean</div>
+            <div class="bento-sub">Median 77.6 · Scale −100 to +200</div>
+        </div>
+        <div class="bento-card">
+            <div class="bento-lbl">Primary Predictor</div>
+            <div class="bento-val">Age Cohort</div>
+            <div class="bento-sub">ANOVA F = 3,176.39 · p &lt; 0.0001</div>
+        </div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -664,7 +947,8 @@ active = st.session_state.active_page
 
 def render_prediction_results(selected_age: str, selected_sex: str, selected_income: str, key_prefix: str = "pred"):
     pred = predict_mhq(model, selected_age, selected_sex, selected_income)
-    delta = pred - STUDY_MEAN_MHQ
+    delta_mean = pred - STUDY_MEAN_MHQ
+    delta_med = pred - STUDY_MEDIAN_MHQ
     tier = mhq_category(pred)
 
     percentile = 50.0
@@ -678,32 +962,33 @@ def render_prediction_results(selected_age: str, selected_sex: str, selected_inc
         cohort_n = int(summary_df.loc[summary_df["age"] == selected_age, "count"].sum())
 
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("🎯 Predicted MHQ Score", f"{pred:.2f}", f"{delta:+.2f} vs. Mean")
-    m2.metric("🧭 Well-Being Tier", tier)
-    m3.metric("📈 Study Percentile", f"{percentile:.0f}th")
-    m4.metric("👥 Age Cohort Size", f"{cohort_n:,}")
+    m1.metric("Predicted MHQ", f"{pred:.2f}", f"{delta_mean:+.2f} vs. Mean")
+    m2.metric("Well-Being Tier", tier)
+    m3.metric("Study Percentile", f"{percentile:.0f}th")
+    m4.metric("Age Cohort Size", f"{cohort_n:,}")
 
     st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
-    g_col, a_col = st.columns([1.6, 1.0])
+    g_col, a_col = st.columns([1.45, 1.15])
 
     with g_col:
-        fig_gauge = go.Figure(
+        fig_bullet = go.Figure(
             go.Indicator(
                 mode="gauge+number+delta",
                 value=pred,
                 delta={"reference": STUDY_MEAN_MHQ, "valueformat": ".1f"},
-                number={"valueformat": ".1f", "font": {"size": 42, "color": "#f8fafc"}},
-                title={"text": f"Predicted MHQ Score · {tier}", "font": {"size": 16, "color": "#5eead4"}},
+                number={"valueformat": ".1f", "font": {"size": 40, "color": "#f8fafc", "family": "JetBrains Mono, monospace"}},
+                title={"text": f"MHQ Continuum (−100 to +200) · Mean {STUDY_MEAN_MHQ:.2f} / Med {STUDY_MEDIAN_MHQ:.1f}", "font": {"size": 13, "color": "#94a3b8"}},
                 gauge={
-                    "axis": {"range": [-100, 200], "tickcolor": "#94a3b8"},
-                    "bar": {"color": "#14b8a6", "thickness": 0.3},
-                    "bgcolor": "rgba(15,23,42,0.5)",
+                    "shape": "bullet",
+                    "axis": {"range": [-100, 200], "tickcolor": "#94a3b8", "tickvals": [-100, -50, 0, 50, 67.65, 77.6, 100, 200], "ticktext": ["-100", "-50", "0", "50", "Mean", "Med", "100", "200"]},
+                    "bar": {"color": "#2dd4bf", "thickness": 0.42},
+                    "bgcolor": "rgba(255,255,255,0.03)",
                     "steps": [
-                        {"range": [-100, -50], "color": "rgba(220,38,38,0.55)"},
-                        {"range": [-50, 0], "color": "rgba(249,115,22,0.55)"},
-                        {"range": [0, 50], "color": "rgba(234,179,8,0.55)"},
-                        {"range": [50, 100], "color": "rgba(34,197,94,0.55)"},
-                        {"range": [100, 200], "color": "rgba(13,148,136,0.55)"},
+                        {"range": [-100, -50], "color": "rgba(239,68,68,0.35)"},
+                        {"range": [-50, 0], "color": "rgba(249,115,22,0.35)"},
+                        {"range": [0, 50], "color": "rgba(234,179,8,0.32)"},
+                        {"range": [50, 100], "color": "rgba(34,197,94,0.32)"},
+                        {"range": [100, 200], "color": "rgba(20,184,166,0.35)"},
                     ],
                     "threshold": {
                         "line": {"color": "#f59e0b", "width": 3},
@@ -713,43 +998,60 @@ def render_prediction_results(selected_age: str, selected_sex: str, selected_inc
                 },
             )
         )
-        fig_gauge.update_layout(**PLOTLY_LAYOUT, height=320)
-        st.plotly_chart(fig_gauge, use_container_width=True)
+        style_plotly(fig_bullet, height=220, margin=dict(l=24, r=24, t=58, b=32))
+        st.plotly_chart(fig_bullet, use_container_width=True)
+        st.caption(
+            f"Population benchmarks (`Full_Statistics.csv`, N = 240,012): **Study Mean = {STUDY_MEAN_MHQ:.2f}** (amber marker) · "
+            f"**Study Median = {STUDY_MEDIAN_MHQ:.1f}** · Your profile delta vs. Median: **{delta_med:+.2f} pts**."
+        )
 
     with a_col:
         if pred >= 100:
-            cls, msg = "alert-thriving", "🟢 <b>Thriving Well-Being</b><br>Strong emotional resilience, clarity, and life satisfaction."
+            cls, msg = "tier-thriving", "Strong emotional resilience, cognitive clarity, and sustained life satisfaction."
         elif pred >= 50:
-            cls, msg = "alert-succeeding", "🟢 <b>Succeeding Well-Being</b><br>Functioning well across work, relationships, and daily mood."
+            cls, msg = "tier-succeeding", "Functioning well across daily work, interpersonal relationships, and baseline mood."
         elif pred >= 0:
-            cls, msg = "alert-managing", "🟡 <b>Managing / Enduring</b><br>Coping with daily life, though with occasional stress or fatigue."
+            cls, msg = "tier-managing", "Coping with everyday demands, though vulnerable to periodic stress or fatigue."
         elif pred >= -50:
-            cls, msg = "alert-struggling", "🟠 <b>Struggling</b><br>Noticeable distress affecting daily mood or focus."
+            cls, msg = "tier-struggling", "Elevated emotional or cognitive strain affecting day-to-day functioning."
         else:
-            cls, msg = "alert-distressed", "🔴 <b>Distressed</b><br>Significant distress; professional clinical support is recommended."
+            cls, msg = "tier-distressed", "Severe symptom burden on the MHQ continuum; structured clinical support is recommended."
         st.markdown(
-            f'<div class="alert-card {cls}">{msg}<br><br><small>Profile: <b>{selected_age}</b> · <b>{selected_sex}</b> · <b>{selected_income}</b><br>Study Average: <b>{STUDY_MEAN_MHQ:.2f}</b> · Screening indicator only, not a clinical diagnosis.</small></div>',
+            f"""
+            <div class="diag-card">
+                <div class="diag-header">
+                    <span class="diag-eyebrow">Diagnostic Profile Readout</span>
+                    <span class="tier-pill {cls}">{tier}</span>
+                </div>
+                <div class="diag-score">{pred:.2f}</div>
+                <div class="diag-desc">{msg}</div>
+                <div class="diag-meta-grid">
+                    <div class="diag-meta-item"><span>Profile</span><strong>{selected_age} · {selected_sex}</strong></div>
+                    <div class="diag-meta-item"><span>Income Bracket</span><strong>{selected_income}</strong></div>
+                    <div class="diag-meta-item"><span>vs. Mean (67.65)</span><strong>{delta_mean:+.2f} pts</strong></div>
+                    <div class="diag-meta-item"><span>vs. Median (77.6)</span><strong>{delta_med:+.2f} pts</strong></div>
+                </div>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
 
     st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
-    if st.button("🌐 Generate Search-Refined Well-Being Plan", type="primary", key=f"ai_btn_{key_prefix}_{selected_age}_{selected_sex}_{selected_income}"):
-        with st.spinner("Retrieving MHQ-tier-refined guidance & verified sources..."):
+    if st.button("Generate Evidence-Based Well-Being Guidance", type="primary", key=f"ai_btn_{key_prefix}_{selected_age}_{selected_sex}_{selected_income}"):
+        with st.spinner("Synthesizing tier-specific guidance and research sources..."):
             advice_text, badge_label, source_links, google_search_url = get_ai_wellbeing_advice(
                 selected_age, selected_sex, selected_income, pred, tier
             )
-        st.markdown(
-            f'<div class="ai-coach-card"><div class="ai-badge">{badge_label}</div></div>',
-            unsafe_allow_html=True,
-        )
-        st.markdown(advice_text)
-        if source_links:
-            links_md = " · ".join(f"[{t}]({u})" for t, u in source_links)
-            st.caption(f"📚 **Sources & References:** {links_md}")
-        st.link_button(
-            f"🔍 Explore More Google Research for {tier} Tier (Age {selected_age})",
-            google_search_url,
-        )
+        with st.container(border=True):
+            st.markdown(f'<div class="ai-badge">{badge_label}</div>', unsafe_allow_html=True)
+            st.markdown(advice_text)
+            if source_links:
+                links_md = " · ".join(f"[{t}]({u})" for t, u in source_links)
+                st.caption(f"**References:** {links_md}")
+            st.link_button(
+                f"Search Peer-Reviewed Literature for {tier} Tier (Age {selected_age})",
+                google_search_url,
+            )
 
 
 if active == "prediction":
@@ -758,12 +1060,12 @@ if active == "prediction":
     if "active_preset" not in st.session_state:
         st.session_state.active_preset = "young"
 
-    st.subheader("🎯 Live MHQ Prediction Workspace")
+    st.subheader("Live MHQ Prediction Workspace")
     m_col1, m_col2, m_col3 = st.columns(3)
     modes = [
-        ("⚡ Quick Demo Presets", "presets"),
-        ("🎯 Custom Prediction", "custom"),
-        ("⚖️ Compare Profiles (A vs. B)", "compare"),
+        ("Quick Demo Presets", "presets"),
+        ("Custom Prediction", "custom"),
+        ("Compare Profiles (A vs. B)", "compare"),
     ]
     for col_box, (m_label, m_key) in zip([m_col1, m_col2, m_col3], modes):
         with col_box:
@@ -779,12 +1081,12 @@ if active == "prediction":
     st.divider()
 
     if st.session_state.pred_mode == "presets":
-        st.markdown("### ⚡ Quick Demo Presets")
-        st.caption("Click any persona below to immediately view their predicted MHQ score and tier")
+        st.markdown("### Quick Demo Presets")
+        st.caption("Select a representative cohort profile to evaluate its baseline MHQ score and tier.")
         PRESETS = {
-            "young": ("🎓 Young Adult (18, Female)", "18", "Female", "Less than ₹1,00,000"),
-            "mid": ("💼 Mid-Career (35-44, Male)", "35-44", "Male", "₹10,00,001 – ₹20,00,000"),
-            "older": ("🌿 Older Adult (65-74, Male)", "65-74", "Male", "₹20,00,001 – ₹40,00,000"),
+            "young": ("Young Adult (18, Female)", "18", "Female", "Less than ₹1,00,000"),
+            "mid": ("Mid-Career (35-44, Male)", "35-44", "Male", "₹10,00,001 – ₹20,00,000"),
+            "older": ("Older Adult (65-74, Male)", "65-74", "Male", "₹20,00,001 – ₹40,00,000"),
         }
         p1, p2, p3 = st.columns(3)
         for p_col, (p_key, (p_label, _, _, _)) in zip([p1, p2, p3], PRESETS.items()):
@@ -803,47 +1105,61 @@ if active == "prediction":
         render_prediction_results(p_age, p_sex, p_inc, key_prefix="preset")
 
     elif st.session_state.pred_mode == "custom":
-        st.markdown("### 🎯 Custom Demographic Prediction")
-        st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            selected_age = st.selectbox("Age Group", age_options, index=0, key="custom_age")
-        with col2:
-            selected_sex = st.selectbox(
-                "Biological Sex",
-                sex_options,
-                index=0,
-                key="custom_sex",
-                format_func=lambda x: f"{'👩' if x == 'Female' else '👨' if x == 'Male' else '⚪'} {x}",
-            )
-        with col3:
-            selected_income = st.selectbox("Household Income (INR)", income_options, index=0, key="custom_inc")
+        st.markdown("### Custom Demographic Prediction")
+        with st.container(border=True):
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                selected_age = st.selectbox(
+                    "Age Group",
+                    age_options,
+                    index=0,
+                    key="custom_age",
+                    help="Respondent age bracket; accounts for 57.7% of Random Forest feature importance.",
+                )
+            with col2:
+                selected_sex = st.selectbox(
+                    "Biological Sex",
+                    sex_options,
+                    index=0,
+                    key="custom_sex",
+                    help="Used instead of the raw 'gender' column (which had 100% missingness across all 240,012 rows).",
+                )
+            with col3:
+                selected_income = st.selectbox(
+                    "Household Income (INR)",
+                    income_options,
+                    index=0,
+                    key="custom_inc",
+                    help="Annual household income normalized to 10 Indian Rupee (INR) brackets.",
+                )
 
-        st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
-        if st.button("✨ Predict MHQ Score", type="primary"):
-            st.session_state.custom_pred_profile = (selected_age, selected_sex, selected_income)
+            if st.button("Predict MHQ Score", type="primary"):
+                st.session_state.custom_pred_profile = (selected_age, selected_sex, selected_income)
 
         if st.session_state.get("custom_pred_profile"):
             c_age, c_sex, c_inc = st.session_state.custom_pred_profile
             render_prediction_results(c_age, c_sex, c_inc, key_prefix="custom")
 
     elif st.session_state.pred_mode == "compare":
-        st.markdown("### ⚖️ Compare Two Profiles (Profile A vs. Profile B)")
-        st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
-        ca, cb = st.columns(2)
-        with ca:
-            st.markdown("**Profile A**")
-            age_a = st.selectbox("Age Group (A)", age_options, index=0, key="cmp_age_a")
-            sex_a = st.selectbox("Biological Sex (A)", sex_options, index=0, key="cmp_sex_a")
-            inc_a = st.selectbox("Household Income (A)", income_options, index=0, key="cmp_inc_a")
-        with cb:
-            st.markdown("**Profile B**")
-            age_b = st.selectbox("Age Group (B)", age_options, index=min(8, len(age_options) - 1), key="cmp_age_b")
-            sex_b = st.selectbox("Biological Sex (B)", sex_options, index=min(1, len(sex_options) - 1), key="cmp_sex_b")
-            inc_b = st.selectbox("Household Income (B)", income_options, index=min(4, len(income_options) - 1), key="cmp_inc_b")
+        st.markdown("### Compare Two Profiles (Profile A vs. Profile B)")
+        with st.container(border=True):
+            ca, cb = st.columns(2)
+            with ca:
+                st.markdown("**Profile A**")
+                age_a = st.selectbox("Age Group (A)", age_options, index=0, key="cmp_age_a", help="Select age bracket for Profile A.")
+                sex_a = st.selectbox("Biological Sex (A)", sex_options, index=0, key="cmp_sex_a", help="Select biological sex for Profile A.")
+                inc_a = st.selectbox("Household Income (A)", income_options, index=0, key="cmp_inc_a", help="Select INR income bracket for Profile A.")
+            with cb:
+                st.markdown("**Profile B**")
+                age_b = st.selectbox("Age Group (B)", age_options, index=min(8, len(age_options) - 1), key="cmp_age_b", help="Select age bracket for Profile B.")
+                sex_b = st.selectbox("Biological Sex (B)", sex_options, index=min(1, len(sex_options) - 1), key="cmp_sex_b", help="Select biological sex for Profile B.")
+                inc_b = st.selectbox("Household Income (B)", income_options, index=min(4, len(income_options) - 1), key="cmp_inc_b", help="Select INR income bracket for Profile B.")
 
-        st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
-        if st.button("⚖️ Compare Profile A vs. Profile B", type="primary"):
+            if st.button("Compare Profile A vs. Profile B", type="primary"):
+                st.session_state.cmp_profiles = ((age_a, sex_a, inc_a), (age_b, sex_b, inc_b))
+
+        if st.session_state.get("cmp_profiles"):
+            (age_a, sex_a, inc_a), (age_b, sex_b, inc_b) = st.session_state.cmp_profiles
             score_a = predict_mhq(model, age_a, sex_a, inc_a)
             score_b = predict_mhq(model, age_b, sex_b, inc_b)
             diff_ba = score_b - score_a
@@ -855,7 +1171,7 @@ if active == "prediction":
 
             cmp_df = pd.DataFrame(
                 {
-                    "Profile": [f"Profile A ({age_a}, {sex_a})", f"Profile B ({age_b}, {sex_b})", "Study Average"],
+                    "Profile": [f"Profile A ({age_a}, {sex_a})", f"Profile B ({age_b}, {sex_b})", "Study Mean"],
                     "MHQ Score": [round(score_a, 2), round(score_b, 2), STUDY_MEAN_MHQ],
                     "Tier": [mhq_category(score_a), mhq_category(score_b), mhq_category(STUDY_MEAN_MHQ)],
                 }
@@ -872,19 +1188,28 @@ if active == "prediction":
                 title="Side-by-Side MHQ Score Comparison",
             )
             fig_cmp.update_traces(texttemplate="%{text:.1f}", textposition="outside")
-            fig_cmp.update_layout(**PLOTLY_LAYOUT, showlegend=False, height=280, xaxis=dict(range=[-100, 210], title="Predicted Overall MHQ Score (-100 to 200)"), yaxis_title="")
+            style_plotly(fig_cmp, showlegend=False, height=280, xaxis=dict(range=[-100, 215], title="Predicted Overall MHQ Score (−100 to +200)"), yaxis_title="")
             st.plotly_chart(fig_cmp, use_container_width=True)
 
 elif active == "explorer":
-    st.subheader("📊 MHQ Score Distribution & Demographic Trends")
+    st.subheader("MHQ Score Distribution & Demographic Trends")
     if summary_df is None or bins_df is None:
         st.info("Summary files (`demographic_summary.csv`, `mhq_bins.csv`) not found.")
     else:
-        f1, f2 = st.columns(2)
-        with f1:
-            age_filter = st.selectbox("Filter Age Group", ["All"] + age_options)
-        with f2:
-            sex_filter = st.selectbox("Filter Biological Sex", ["All"] + sex_options)
+        with st.container(border=True):
+            f1, f2 = st.columns(2)
+            with f1:
+                age_filter = st.selectbox(
+                    "Filter Age Group",
+                    ["All"] + age_options,
+                    help="Filter the MHQ distribution histogram and weighted summary statistics by age bracket.",
+                )
+            with f2:
+                sex_filter = st.selectbox(
+                    "Filter Biological Sex",
+                    ["All"] + sex_options,
+                    help="Filter respondents by reported biological sex.",
+                )
 
         filt_sum = summary_df.copy()
         filt_bins = bins_df.copy()
@@ -927,7 +1252,7 @@ elif active == "explorer":
                     annotation_text=f"Group Mean ({weighted_mean:.1f})",
                     annotation_position="top right",
                 )
-            fig_hist.update_layout(**PLOTLY_LAYOUT, height=360, bargap=0.06)
+            style_plotly(fig_hist, height=360, bargap=0.06)
             st.plotly_chart(fig_hist, use_container_width=True)
 
         age_grp = (
@@ -964,7 +1289,7 @@ elif active == "explorer":
                 line_color="#f59e0b",
                 annotation_text=f"Study Mean ({STUDY_MEAN_MHQ:.1f})",
             )
-            fig_age.update_layout(**PLOTLY_LAYOUT, height=390, coloraxis_showscale=False)
+            style_plotly(fig_age, height=390, coloraxis_showscale=False)
             st.plotly_chart(fig_age, use_container_width=True)
 
         with g2:
@@ -975,10 +1300,11 @@ elif active == "explorer":
                 y="Mean Score",
                 color="Dimension",
                 markers=True,
+                color_discrete_sequence=["#2dd4bf", "#38bdf8", "#818cf8", "#a78bfa", "#34d399"],
                 title="All 5 MHQ Dimensions Across Age Groups",
                 labels={"age": "Age Group", "Mean Score": "Mean Score"},
             )
-            fig_sub.update_layout(**PLOTLY_LAYOUT, height=390, hovermode="x unified", legend=dict(orientation="h", y=-0.25))
+            style_plotly(fig_sub, height=390, hovermode="x unified", legend=dict(orientation="h", y=-0.25))
             st.plotly_chart(fig_sub, use_container_width=True)
 
         if income_df is not None and not income_df.empty:
@@ -999,11 +1325,11 @@ elif active == "explorer":
                 line_color="#f59e0b",
                 annotation_text=f"Study Mean ({STUDY_MEAN_MHQ:.1f})",
             )
-            fig_inc.update_layout(**PLOTLY_LAYOUT, height=420, coloraxis_showscale=False, yaxis=dict(categoryorder="array", categoryarray=income_df["income_inr"].tolist()[::-1]))
+            style_plotly(fig_inc, height=420, coloraxis_showscale=False, yaxis=dict(categoryorder="array", categoryarray=income_df["income_inr"].tolist()[::-1]))
             st.plotly_chart(fig_inc, use_container_width=True)
 
 elif active == "model":
-    st.subheader("📈 Feature Importance, Model Performance & Statistical Findings")
+    st.subheader("Feature Importance, Model Performance & Statistical Findings")
     all_features = model.named_steps["preprocessor"].get_feature_names_out()
     clean_features = []
     for name in all_features:
@@ -1025,11 +1351,11 @@ elif active == "model":
             y="Feature",
             orientation="h",
             color="Importance",
-            color_continuous_scale="Viridis",
+            color_continuous_scale="Tealgrn",
             title="Top 10 Predictors of Overall MHQ Score",
             labels={"Importance": "Importance Score", "Feature": ""},
         )
-        fig_imp.update_layout(**PLOTLY_LAYOUT, height=410, coloraxis_showscale=False)
+        style_plotly(fig_imp, height=410, coloraxis_showscale=False)
         st.plotly_chart(fig_imp, use_container_width=True)
 
     with m_col2:
@@ -1053,11 +1379,12 @@ elif active == "model":
             labels={"R2": "R-squared (Variance Explained)", "Target": ""},
         )
         fig_perf.update_traces(texttemplate="%{text:.4f}", textposition="outside")
-        fig_perf.update_layout(**PLOTLY_LAYOUT, height=410, coloraxis_showscale=False, xaxis=dict(range=[0, 0.165]))
+        style_plotly(fig_perf, height=410, coloraxis_showscale=False, xaxis=dict(range=[0, 0.165]))
         st.plotly_chart(fig_perf, use_container_width=True)
 
-    st.markdown(
-        """
+    with st.container(border=True):
+        st.markdown(
+            """
 **Verified Model & Hypothesis Testing Summary**
 - **Overall MHQ Model:** `R² = 0.1348` (`13.48%` variance explained), `RMSE = 67.24`
 - **One-Way ANOVA (`overall_mhq_score`):**
@@ -1066,10 +1393,10 @@ elif active == "model":
   - `income_household`: $F = 66.07$, $p = 8.72 \\times 10^{-259}$ (Significant)
 - **Chi-Square (`biological_sex` vs. `income_household`):** $\\chi^2 = 1666.66$, $\\text{DoF} = 60$, $p = 7.26 \\times 10^{-309}$ (Significant)
 """
-    )
+        )
 
 elif active == "paper":
-    st.subheader("📄 Predicting Mental Health Questionnaire (MHQ) Scores from Demographic Factors")
+    st.subheader("Research Paper: Predicting Mental Health Questionnaire (MHQ) Scores from Demographic Factors")
     paper_html_path = os.path.join(BASE_DIR, "Research_Paper_Interactive.html")
     if "show_paper_viewer" not in st.session_state:
         st.session_state["show_paper_viewer"] = False
@@ -1082,17 +1409,17 @@ elif active == "paper":
         )
         act_c1, act_c2, act_c3, _ = st.columns([1.35, 1.15, 1.25, 1.25])
         act_c1.link_button(
-            label="↗️ Open Paper in New Page",
+            label="↗ Open Paper in New Page",
             url="?view=paper",
             type="primary",
             use_container_width=True,
         )
-        toggle_label = "✖️ Close Preview" if st.session_state["show_paper_viewer"] else "👁️ Preview Inline"
+        toggle_label = "Close Preview" if st.session_state["show_paper_viewer"] else "Preview Inline"
         if act_c2.button(toggle_label, use_container_width=True):
             st.session_state["show_paper_viewer"] = not st.session_state["show_paper_viewer"]
             st.rerun()
         act_c3.download_button(
-            label="⬇️ Download Research Paper",
+            label="Download HTML Paper",
             data=viewer_html.encode("utf-8"),
             file_name="research_paper.html",
             mime="text/html",
@@ -1100,10 +1427,10 @@ elif active == "paper":
         )
 
         if st.session_state["show_paper_viewer"]:
-            st.caption("Inline reader preview — click 'Open Paper in New Page' for a clean full-screen presentation view.")
+            st.caption("Inline reader preview — click 'Open Paper in New Page' for the full-screen presentation view.")
             components.html(viewer_html, height=820, scrolling=True)
 
-    with st.expander("🤖 Ask the MHQ Research Paper (Interactive Viva Q&A)", expanded=True):
+    with st.expander("Ask the Study (Interactive Viva Q&A)", expanded=True):
         q_c1, q_c2, q_c3, q_c4 = st.columns(4)
         preset_q = None
         if q_c1.button("Why is R² only 0.1348?", use_container_width=True):
@@ -1119,10 +1446,10 @@ elif active == "paper":
         if active_q:
             with st.spinner("Searching verified MHQ study findings..."):
                 ans_text, used_live = ask_research_paper_ai(active_q)
-            badge_q = "🤖 Live Gemini AI" if used_live else "🧠 MHQ Research Intelligence Engine"
+            badge_q = "Live Gemini Grounded Answer" if used_live else "Verified Study Knowledge Base"
             st.info(f"**{badge_q}**\n\n{ans_text}")
 
-    with st.expander("🔮 Future Scope: Medical College Loneliness Inventory (LI) Cross-Validation", expanded=False):
+    with st.expander("Future Scope: Medical College Loneliness Inventory (LI) Cross-Validation", expanded=False):
         st.markdown(
             """
 **Resolving the Social Self Paradox through Psychometric Cross-Validation:**
@@ -1133,8 +1460,10 @@ elif active == "paper":
 - **Ensemble Integration:** Adding LI sub-constructs alongside sleep, UPF diet, and exercise into Random Forest / Gradient Boosting models with SHAP attribution to benchmark against the $\\sim 0.30$ survey predictability ceiling established by Oparina et al. (2025).
 """
         )
-    st.markdown(
-        """
+
+    with st.container(border=True):
+        st.markdown(
+            """
 ### Abstract (In Plain English)
 This study evaluates whether **age**, **biological sex**, and **household income** can predict an individual's **Overall MHQ Score** across **240,012 survey respondents** and **207 variables**. The Random Forest model achieved **R² = 0.1348** and **RMSE = 67.24**, meaning demographic factors explain about **13.5%** of the variation in mental well-being—with **age** as the strongest driver and **Cognition** (`R² = 0.1356`) as the most predictable domain. The remaining ~86.5% depends on personal life experiences, sleep, social support, and clinical factors, so this model is designed for **population screening and research**, not medical diagnosis.
 
@@ -1152,8 +1481,9 @@ This study evaluates whether **age**, **biological sex**, and **household income
 - **Chi-Square** ($\\chi^2 = 1666.66$, $p < 0.0001$) confirmed that biological sex and household income are statistically associated in the survey.
 - **Data Quality Fix:** The raw `gender` column was 100% empty (240,012 nulls); replacing it with `biological_sex` (239,995 valid entries) resolved all statistical and modeling errors.
 """
-    )
-    with st.expander("📖 Plain-English Glossary of Technical Terms"):
+        )
+
+    with st.expander("Plain-English Glossary of Technical Terms"):
         st.markdown(
             """
 - **Random Forest:** An ensemble of 100 decision trees that average their predictions for stable accuracy.
@@ -1163,8 +1493,10 @@ This study evaluates whether **age**, **biological sex**, and **household income
 - **SimpleImputer:** Filling missing values with `"Unknown"` so the model never crashes on blank fields.
 """
         )
+
+    st.markdown("### Publication Figures")
     assets_dir = os.path.join(BASE_DIR, "assets")
-    for img_name, caption in [
+    paper_figures = [
         ("pipeline_architecture.png", "Figure 1: End-to-End MHQ Research & Deployment Architecture"),
         ("mhq_by_age_distribution.png", "Figure 2: Average Overall MHQ Score Across Age Groups"),
         ("mhq_by_income_inr.png", "Figure 3: Mean Overall MHQ Score by Household Income (INR)"),
@@ -1172,10 +1504,17 @@ This study evaluates whether **age**, **biological sex**, and **household income
         ("feature_importance.png", "Figure 5: Top 10 Demographic Predictors (INR Normalized)"),
         ("subscore_predictability.png", "Figure 6: Model Predictability (R²) Across Overall MHQ and Domain Sub-Scores"),
         ("mhq_direct_indirect_relations.png", "Figure 7: Direct Pearson Correlations (r) & Indirect Lifestyle / Socioeconomic MHQ Score Gaps"),
-    ]:
-        img_p = os.path.join(assets_dir, img_name)
-        if os.path.exists(img_p):
-            st.image(img_p, caption=caption, use_container_width=True)
+    ]
+    for idx in range(0, len(paper_figures) - 1, 2):
+        fig_c1, fig_c2 = st.columns(2)
+        for col_target, (img_name, caption) in zip([fig_c1, fig_c2], paper_figures[idx:idx + 2]):
+            img_p = os.path.join(assets_dir, img_name)
+            if os.path.exists(img_p):
+                col_target.image(img_p, caption=caption, use_container_width=True)
+    last_img, last_cap = paper_figures[-1]
+    last_p = os.path.join(assets_dir, last_img)
+    if os.path.exists(last_p):
+        st.image(last_p, caption=last_cap, use_container_width=True)
 
 # Full-Page Swarm Rebuild Animation + Interactive Cursor Swarm Engine
 if enable_swarm:
