@@ -35,6 +35,9 @@
     --gloss-bg:   #f8fafc;
     --gloss-text: #334155;
     --toolbar-bg: rgba(255, 255, 255, 0.88);
+    --code-fg:    #0369a1;
+    --warn-bg:    #fffbeb;
+    --warn-fg:    #92400e;
   }
 
   html[data-theme="dark"] {
@@ -60,6 +63,9 @@
     --gloss-bg:   #1e293b;
     --gloss-text: #cbd5e1;
     --toolbar-bg: rgba(17, 24, 39, 0.88);
+    --code-fg:    #38bdf8;
+    --warn-bg:    rgba(245, 158, 11, 0.14);
+    --warn-fg:    #fbbf24;
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -443,10 +449,10 @@
   }
   .callout-warn {
     border-left-color: var(--warn);
-    background: #fffbeb;
+    background: var(--warn-bg);
   }
   .callout strong { color: var(--accent-dk); }
-  .callout-warn strong { color: #92400e; }
+  .callout-warn strong { color: var(--warn-fg); }
   .callout p:last-child { margin-bottom: 0; }
 
   /* ── Tables ── */
@@ -473,14 +479,14 @@
     color: var(--muted);
     font-style: italic;
   }
-  figcaption strong { font-style: normal; color: #334155; }
+  figcaption strong { font-style: normal; color: var(--h3-color); }
 
   /* ── Code ── */
   code {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.85em;
     background: var(--code-bg);
-    color: #0369a1;
+    color: var(--code-fg);
     padding: 1px 5px;
     border-radius: 4px;
   }
@@ -521,7 +527,7 @@
   /* ── Subscore bar chart (pure CSS) ── */
   .bar-chart { margin: 16px 0; }
   .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-  .bar-label { width: 220px; font-size: 0.85rem; color: #334155; flex-shrink: 0; }
+  .bar-label { width: 220px; font-size: 0.85rem; color: var(--th-text); flex-shrink: 0; }
   .bar-track { flex: 1; background: var(--border); border-radius: 999px; height: 18px; overflow: hidden; }
   .bar-fill {
     height: 100%;
@@ -1240,9 +1246,13 @@
         }
       }
     });
-  }, { rootMargin: '-72px 0px -60% 0px', threshold: 0 });
+  }, { rootMargin: '-76px 0px -55% 0px', threshold: 0 });
 
   sections.forEach(s => observer.observe(s));
+  tocLinks.forEach(a => a.addEventListener('click', () => {
+    tocLinks.forEach(x => x.classList.remove('active'));
+    a.classList.add('active');
+  }));
 
   // Smooth reading progress bar & back-to-top button
   const progressBar = document.getElementById('read-progress');

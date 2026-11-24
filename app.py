@@ -108,9 +108,10 @@ st.markdown(
         border-radius: 12px !important;
         transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
     }
-    /* Primary action buttons in main content */
+    /* Primary action buttons & link buttons in main content */
     .main .stButton > button[kind="primary"],
-    .main .stDownloadButton > button {
+    .main .stDownloadButton > button,
+    .main div[data-testid="stLinkButton"] a[kind="primary"] {
         border-radius: 12px;
         padding: 0.6rem 1.25rem;
         font-weight: 600;
@@ -121,9 +122,11 @@ st.markdown(
         transition: transform 0.18s ease, box-shadow 0.18s ease;
     }
     .main .stButton > button[kind="primary"]:hover,
-    .main .stDownloadButton > button:hover {
+    .main .stDownloadButton > button:hover,
+    .main div[data-testid="stLinkButton"] a[kind="primary"]:hover {
         transform: translateY(-1px);
         box-shadow: 0 6px 20px rgba(20, 184, 166, 0.45);
+        color: #ffffff;
     }
     /* Metric cards with hover lift & accent border */
     div[data-testid="stMetric"] {
@@ -536,6 +539,58 @@ if model is None:
 summary_df, bins_df, income_df = load_summaries()
 age_options, sex_options, income_options = get_model_categories(model)
 
+@st.cache_data(show_spinner=False)
+def load_research_paper_html(paper_path: str, assets_dir: str) -> str:
+    """Load Research_Paper_Interactive.html and inline local assets as base64 data URIs for iframe viewing."""
+    with open(paper_path, "r", encoding="utf-8") as f:
+        html_str = f.read()
+
+    def _replace_src(match: re.Match) -> str:
+        rel_path = match.group(1)
+        img_path = os.path.join(assets_dir, os.path.basename(rel_path))
+        if os.path.exists(img_path):
+            with open(img_path, "rb") as img_f:
+                b64 = base64.b64encode(img_f.read()).decode("ascii")
+            return f'src="data:image/png;base64,{b64}"'
+        return match.group(0)
+
+    return re.sub(r'src="(assets/[^"]+\.png)"', _replace_src, html_str)
+
+
+if st.query_params.get("view") == "paper":
+    paper_html_path = os.path.join(BASE_DIR, "Research_Paper_Interactive.html")
+    st.markdown(
+        """
+        <style>
+        section[data-testid="stSidebar"],
+        [data-testid="stSidebarCollapsedControl"],
+        header[data-testid="stHeader"],
+        [data-testid="stToolbar"],
+        footer { display: none !important; }
+        .main .block-container {
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
+        }
+        section.main iframe {
+            width: 100% !important;
+            height: 100vh !important;
+            min-height: 100vh !important;
+            border: none !important;
+            display: block !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    if os.path.exists(paper_html_path):
+        full_paper_html = load_research_paper_html(paper_html_path, os.path.join(BASE_DIR, "assets"))
+        components.html(full_paper_html, height=960, scrolling=True)
+    else:
+        st.error("Research_Paper_Interactive.html was not found in the repository.")
+    st.stop()
+
+
 # Vertical Sidebar Navigation Panel
 NAV_ITEMS = [
     ("🎯 Live Prediction", "prediction"),
@@ -560,7 +615,7 @@ with st.sidebar:
             st.rerun()
 
     st.divider()
-    enable_swarm = st.toggle("✨ Full-Page Swarm Rebuild", value=True)
+    enable_swarm = st.toggle("✨ Full-Page Swarm Rebuild", value=False)
     if st.button("🔄 Replay Page Rebuild", use_container_width=True):
         st.session_state.rebuild_nonce += 1
         st.rerun()
@@ -665,24 +720,6 @@ def render_prediction_results(selected_age: str, selected_sex: str, selected_inc
             f"🔍 Explore More Google Research for {tier} Tier (Age {selected_age})",
             google_search_url,
         )
-
-
-@st.cache_data(show_spinner=False)
-def load_research_paper_html(paper_path: str, assets_dir: str) -> str:
-    """Load Research_Paper_Interactive.html and inline local assets as base64 data URIs for iframe viewing."""
-    with open(paper_path, "r", encoding="utf-8") as f:
-        html_str = f.read()
-
-    def _replace_src(match: re.Match) -> str:
-        rel_path = match.group(1)
-        img_path = os.path.join(assets_dir, os.path.basename(rel_path))
-        if os.path.exists(img_path):
-            with open(img_path, "rb") as img_f:
-                b64 = base64.b64encode(img_f.read()).decode("ascii")
-            return f'src="data:image/png;base64,{b64}"'
-        return match.group(0)
-
-    return re.sub(r'src="(assets/[^"]+\.png)"', _replace_src, html_str)
 
 
 if active == "prediction":
@@ -1009,57 +1046,13 @@ elif active == "paper":
 
     if os.path.exists(paper_html_path):
         viewer_html = load_research_paper_html(paper_html_path, os.path.join(BASE_DIR, "assets"))
-        viewer_b64 = base64.b64encode(viewer_html.encode("utf-8")).decode("ascii")
         act_c1, act_c2, act_c3, _ = st.columns([1.35, 1.15, 1.25, 1.25])
-        with act_c1:
-            components.html(
-                f"""
-                <!DOCTYPE html>
-                <html><head><meta charset="utf-8"><style>
-                  html, body {{ margin: 0; padding: 0; overflow: hidden; background: transparent; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }}
-                  .open-btn {{
-                    display: flex; align-items: center; justify-content: center; gap: 6px;
-                    width: 100%; height: 39px; box-sizing: border-box; border: none;
-                    border-radius: 12px; text-decoration: none;
-                    font-weight: 600; font-size: 14px; color: #ffffff;
-                    background: linear-gradient(90deg, #0d9488 0%, #0ea5e9 100%);
-                    box-shadow: 0 2px 10px rgba(13, 148, 136, 0.28);
-                    transition: filter 0.18s ease, box-shadow 0.18s ease;
-                    cursor: pointer;
-                  }}
-                  .open-btn:hover {{
-                    filter: brightness(1.08);
-                    box-shadow: 0 4px 14px rgba(20, 184, 166, 0.42);
-                  }}
-                </style></head><body>
-                <button id="open-tab-btn" class="open-btn" type="button">↗️ Open Paper in New Page</button>
-                <script>
-                  (function() {{
-                    const b64 = "{viewer_b64}";
-                    function decodeHtml() {{
-                      const binStr = atob(b64);
-                      const bytes = new Uint8Array(binStr.length);
-                      for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
-                      return new TextDecoder("utf-8").decode(bytes);
-                    }}
-                    document.getElementById("open-tab-btn").addEventListener("click", function() {{
-                      const html = decodeHtml();
-                      const win = window.open("", "_blank");
-                      if (win) {{
-                        win.document.open();
-                        win.document.write(html);
-                        win.document.close();
-                      }} else {{
-                        const blob = new Blob([html], {{ type: "text/html;charset=utf-8" }});
-                        window.open(URL.createObjectURL(blob), "_blank");
-                      }}
-                    }});
-                  }})();
-                </script>
-                </body></html>
-                """,
-                height=42,
-            )
+        act_c1.link_button(
+            label="↗️ Open Paper in New Page",
+            url="?view=paper",
+            type="primary",
+            use_container_width=True,
+        )
         toggle_label = "✖️ Close Preview" if st.session_state["show_paper_viewer"] else "👁️ Preview Inline"
         if act_c2.button(toggle_label, use_container_width=True):
             st.session_state["show_paper_viewer"] = not st.session_state["show_paper_viewer"]
@@ -1073,7 +1066,7 @@ elif active == "paper":
         )
 
         if st.session_state["show_paper_viewer"]:
-            st.caption("Inline reader preview — for the full-screen experience with search, dark mode & figure zoom, use Open Paper in New Page.")
+            st.caption("Inline reader preview — click 'Open Paper in New Page' for a clean full-screen presentation view.")
             components.html(viewer_html, height=820, scrolling=True)
 
     with st.expander("🤖 Ask the MHQ Research Paper (Interactive Viva Q&A)", expanded=True):
@@ -1284,9 +1277,13 @@ if enable_swarm:
               }});
               if (remaining === 0) active = false;
             }}
+            if (active) {{
+              win.requestAnimationFrame(tick);
+            }}
+          }}
+          if (active) {{
             win.requestAnimationFrame(tick);
           }}
-          win.requestAnimationFrame(tick);
         }})();
         </script>
         """,
