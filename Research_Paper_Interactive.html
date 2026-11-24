@@ -313,9 +313,26 @@
 
   /* ── Print ── */
   @media print {
-    .toc, nav { display: none; }
+    .toc, nav, #read-progress, #back-to-top { display: none !important; }
     .page-wrap { grid-template-columns: 1fr; }
     article { box-shadow: none; border: none; padding: 0; }
+  }
+
+  /* ── Micro-interactions ── */
+  .paper-link { transition: background 0.18s ease, transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.18s ease; }
+  .paper-link:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(13, 148, 136, 0.16); }
+  .kpi { transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease, border-color 0.22s ease; }
+  .kpi:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: var(--accent-mid); }
+  figure { transition: box-shadow 0.25s ease, transform 0.25s cubic-bezier(0.22, 1, 0.36, 1); }
+  figure:hover { box-shadow: var(--shadow-md); }
+  tbody tr { transition: background-color 0.15s ease; }
+  tbody tr:hover td { background: #f0fdfa !important; }
+  .glossary details { transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+  .glossary summary { transition: background-color 0.18s ease; }
+  .glossary summary:hover { background: #f1f5f9; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
   }
 
   /* ── Responsive ── */
@@ -333,6 +350,7 @@
 </style>
 </head>
 <body>
+<div id="read-progress" aria-hidden="true"></div>
 
 <div class="page-wrap">
 
@@ -933,6 +951,8 @@
   </article>
 </div>
 
+<button id="back-to-top" type="button" aria-label="Back to top">↑ Top</button>
+
 <script>
   // Active TOC highlight on scroll
   const sections = document.querySelectorAll('section[id], h2[id], h3[id]');
@@ -943,12 +963,42 @@
       if (entry.isIntersecting) {
         tocLinks.forEach(a => a.classList.remove('active'));
         const link = document.querySelector(`.toc a[href="#${entry.target.id}"]`);
-        if (link) link.classList.add('active');
+        if (link) {
+          link.classList.add('active');
+          link.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
       }
     });
   }, { rootMargin: '0px 0px -60% 0px', threshold: 0 });
 
   sections.forEach(s => observer.observe(s));
+
+  // Smooth reading progress bar & back-to-top button
+  const progressBar = document.getElementById('read-progress');
+  const backToTop = document.getElementById('back-to-top');
+  let ticking = false;
+
+  const updateScrollUI = () => {
+    const scrollTop = window.scrollY || document.documentElement.scrollTop;
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    const pct = docHeight > 0 ? Math.min(100, Math.max(0, (scrollTop / docHeight) * 100)) : 0;
+    if (progressBar) progressBar.style.width = pct.toFixed(2) + '%';
+    if (backToTop) backToTop.classList.toggle('visible', scrollTop > 400);
+    ticking = false;
+  };
+
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      window.requestAnimationFrame(updateScrollUI);
+      ticking = true;
+    }
+  }, { passive: true });
+
+  if (backToTop) {
+    backToTop.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
 </script>
 </body>
 </html>

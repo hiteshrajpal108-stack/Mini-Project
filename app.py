@@ -28,6 +28,22 @@ st.markdown(
     """
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+    /* Smooth scrolling & subtle page fade-in */
+    html, .stApp, section.main {
+        scroll-behavior: smooth;
+    }
+    @keyframes fadeSlideUp {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .main .block-container {
+        animation: fadeSlideUp 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    /* Custom thin scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+    ::-webkit-scrollbar-thumb { background: rgba(45, 212, 191, 0.32); border-radius: 999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(45, 212, 191, 0.55); }
     /* Main background & header polish */
     .stApp {
         background: radial-gradient(circle at top right, #0f292e 0%, #0f172a 45%, #090d16 100%);
@@ -50,20 +66,54 @@ st.markdown(
         color: #e2e8f0;
         font-weight: 600;
         font-size: 0.95rem;
-        transition: all 0.2s ease;
+        transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
         margin-bottom: 0.35rem;
     }
     section[data-testid="stSidebar"] .stButton > button:hover {
         border-color: #14b8a6;
         background: rgba(13, 148, 136, 0.18);
         color: #5eead4;
-        transform: translateX(3px);
+        transform: translateX(4px);
     }
     section[data-testid="stSidebar"] .stButton > button[kind="primary"] {
         background: linear-gradient(90deg, #0d9488 0%, #14b8a6 100%);
         border-color: #2dd4bf;
         color: #ffffff;
         box-shadow: 0 4px 16px rgba(20, 184, 166, 0.28);
+    }
+    /* Secondary action buttons in main content (preset Q&A, pills) */
+    .main .stButton > button[kind="secondary"] {
+        border-radius: 12px;
+        border: 1px solid rgba(45, 212, 191, 0.24);
+        background: rgba(30, 41, 59, 0.62);
+        color: #e2e8f0;
+        font-weight: 600;
+        backdrop-filter: blur(8px);
+        transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .main .stButton > button[kind="secondary"]:hover {
+        border-color: #2dd4bf;
+        background: rgba(13, 148, 136, 0.22);
+        color: #5eead4;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 18px rgba(13, 148, 136, 0.22);
+    }
+    /* Expanders & inputs smooth polish */
+    div[data-testid="stExpander"] {
+        border-radius: 14px !important;
+        border: 1px solid rgba(148, 163, 184, 0.18) !important;
+        background: rgba(15, 23, 42, 0.55) !important;
+        backdrop-filter: blur(8px);
+        transition: border-color 0.22s ease, box-shadow 0.22s ease;
+    }
+    div[data-testid="stExpander"]:hover {
+        border-color: rgba(45, 212, 191, 0.38) !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+    }
+    div[data-baseweb="input"] > div,
+    div[data-baseweb="select"] > div {
+        border-radius: 12px !important;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
     }
     /* Primary action buttons in main content */
     .main .stButton > button[kind="primary"],
