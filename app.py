@@ -438,10 +438,10 @@ def ask_research_paper_ai(question: str) -> tuple[str, bool]:
             "**Future Scope: Loneliness Inventory (LI) Cross-Scale Permutation Validation:** "
             "While `social_self_score` exhibits the strongest direct Pearson correlation with overall MHQ (r = +0.9136), "
             "it has the lowest demographic predictability (R² = 0.1013, RMSE = 72.52). Young adults aged 18 have "
-            "the lowest baseline MHQ (23.12 vs. 101.99 for ages 65–74), while frequent socializing provides a +40.9 point gain. "
-            "To bridge this gap, proposed future work co-administers the 19-item Loneliness Inventory (LI; Uma & Krishnan, 2010, Psychotronics Publications) "
-            "with MHQ across medical student cohorts (ages 18–24), applies 5→1 reverse-scoring to the 8 connectedness items (theoretical score range 19–95), "
-            "and conducts 10,000-iteration non-parametric permutation tests to derive exact distribution-free p-values."
+            "the lowest baseline MHQ (23.12 vs. 101.99 for ages 65–74; +78.9 pt generational gap), while frequent socializing provides a +40.9 point gain. "
+            "To bridge this gap, proposed future work co-administers the 19-item Loneliness Inventory (LI; Uma, Meenakshi R. under the guidance of Prof. Krishnan K., 2010, Psychotronics Publications) "
+            "with MHQ across medical student cohorts (ages 18–24), applies 5→1 reverse-scoring to the 8 connectedness/support items (Items 1, 5, 6, 9, 14, 16, 18, 19; theoretical range 19–95), "
+            "and conducts 10,000-iteration non-parametric permutation tests to derive exact distribution-free p-values for cohorts of n = 100–500 without assuming bivariate normality."
         )
     else:
         fallback = (
@@ -466,7 +466,7 @@ def ask_research_paper_ai(question: str) -> tuple[str, bool]:
             "Top features: age_18 (25.98%), age_65-74 (16.60%), age_55-64 (15.12%). Raw gender was 100% null -> replaced with biological_sex (239,995 valid). "
             "INR income peaks at 85L-2.1Cr (108.33) and dips to 90.99 (>2.1Cr). Direct correlates: social_self (+0.91), sad_hopeless (-0.72), daily UPF (-68.6 pts). "
             "Indirect pathways: Age 18->65-74 (+78.9 pts), Sleep (+74.4 pts), Employment (+76.7 pts), Exercise (+45.6 pts), Socializing (+40.9 pts). "
-            "Future Scope extension: Cross-Scale Permutation Validation co-administers Uma & Krishnan's (2010, Psychotronics Publications) 19-item Loneliness Inventory (LI) "
+            "Future Scope extension: Cross-Scale Permutation Validation co-administers the 19-item Loneliness Inventory (LI; Uma, Meenakshi R. under the guidance of Prof. Krishnan K., 2010, Psychotronics Publications) "
             "in medical college cohorts (ages 18-24). Rationale: social_self_score has strongest direct correlation with MHQ (r=+0.9136) but lowest demographic R² (0.1013, RMSE=72.52); "
             "age 18 has lowest mean MHQ (23.12); socializing yields +40.9 pts. LI items: 11 direct isolation items (1->5) and 8 positive connectedness items reverse-scored "
             "(5->1; items 1,5,6,9,14,16,18,19), yielding theoretical range 19-95. Protocol executes 10,000 non-parametric permutation iterations for exact distribution-free "
@@ -977,7 +977,7 @@ elif active == "paper":
 **Resolving the Social Self Paradox through Psychometric Cross-Validation:**
 
 - **The Empirical Paradox:** `social_self_score` exhibits the strongest direct Pearson correlation with overall MHQ ($r = +0.9136$), yet records the lowest predictability from demographic features ($R^2 = 0.1013$, $\\text{RMSE} = 72.52$). Furthermore, 18-year-old college entrants record the lowest cohort MHQ ($23.12$ vs. $101.99$ for ages 65–74; $+78.9$ point gap), while frequent socializing delivers a $+40.9$-point MHQ gain.
-- **19-Item Loneliness Inventory (LI) Instrument:** Developed by Uma & Prof. Krishnan K. (2010, *Psychotronics Publications*) for Indian collegiate and medical cohorts. Consists of 11 direct isolation items (scored $1 \\to 5$) and 8 positive connectedness / instrumental support items (Items 1, 5, 6, 9, 14, 16, 18, 19—reverse-scored $5 \\to 1$), yielding a theoretical range of $19$ (lowest loneliness) to $95$ (highest loneliness).
+- **19-Item Loneliness Inventory (LI) Instrument:** Developed by Uma, Meenakshi R. under the guidance of Prof. Krishnan K. (2010, *Psychotronics Publications*) for Indian collegiate and medical cohorts. Consists of 11 direct isolation items (scored $1 \\to 5$) and 8 positive connectedness / instrumental support items (Items 1, 5, 6, 9, 14, 16, 18, 19—reverse-scored $5 \\to 1$), yielding a theoretical range of $19$ (lowest loneliness) to $95$ (highest loneliness).
 - **10,000-Iteration Permutation Protocol:** Co-administering LI and MHQ across anonymized medical students (ages 18–24) with institutional ethics approval. Non-parametric permutation testing ($10{,}000$ label resamples) computes exact, distribution-free $p$-values between total LI scores and MHQ targets, remaining robust for small sample sizes ($n = 100\\text{--}500$) without assuming bivariate normality.
 - **Ensemble Integration:** Adding LI sub-constructs alongside sleep, UPF diet, and exercise into Random Forest / Gradient Boosting models with SHAP attribution to benchmark against the $\\sim 0.30$ survey predictability ceiling established by Oparina et al. (2025).
 """
