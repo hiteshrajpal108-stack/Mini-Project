@@ -76,15 +76,16 @@ st.markdown(
         box-shadow: 0 4px 16px rgba(20, 184, 166, 0.28);
     }
     /* Secondary action buttons in main content (preset Q&A, pills) */
+    [data-testid="stMain"] .stButton > button[kind="secondary"],
     .main .stButton > button[kind="secondary"] {
         border-radius: 12px;
         border: 1px solid rgba(45, 212, 191, 0.24);
         background: rgba(30, 41, 59, 0.62);
         color: #e2e8f0;
         font-weight: 600;
-        backdrop-filter: blur(8px);
         transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
     }
+    [data-testid="stMain"] .stButton > button[kind="secondary"]:hover,
     .main .stButton > button[kind="secondary"]:hover {
         border-color: #2dd4bf;
         background: rgba(13, 148, 136, 0.22);
@@ -109,6 +110,9 @@ st.markdown(
         transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
     }
     /* Primary action buttons & link buttons in main content */
+    [data-testid="stMain"] .stButton > button[kind="primary"],
+    [data-testid="stMain"] .stDownloadButton > button,
+    [data-testid="stMain"] div[data-testid="stLinkButton"] a[kind="primary"],
     .main .stButton > button[kind="primary"],
     .main .stDownloadButton > button,
     .main div[data-testid="stLinkButton"] a[kind="primary"] {
@@ -121,6 +125,9 @@ st.markdown(
         box-shadow: 0 4px 14px rgba(13, 148, 136, 0.32);
         transition: transform 0.18s ease, box-shadow 0.18s ease;
     }
+    [data-testid="stMain"] .stButton > button[kind="primary"]:hover,
+    [data-testid="stMain"] .stDownloadButton > button:hover,
+    [data-testid="stMain"] div[data-testid="stLinkButton"] a[kind="primary"]:hover,
     .main .stButton > button[kind="primary"]:hover,
     .main .stDownloadButton > button:hover,
     .main div[data-testid="stLinkButton"] a[kind="primary"]:hover {
@@ -540,7 +547,7 @@ summary_df, bins_df, income_df = load_summaries()
 age_options, sex_options, income_options = get_model_categories(model)
 
 @st.cache_data(show_spinner=False)
-def load_research_paper_html(paper_path: str, assets_dir: str) -> str:
+def load_research_paper_html(paper_path: str, assets_dir: str, cache_key: float = 0.0) -> str:
     """Load Research_Paper_Interactive.html and inline local assets as base64 data URIs for iframe viewing."""
     with open(paper_path, "r", encoding="utf-8") as f:
         html_str = f.read()
@@ -566,26 +573,49 @@ if st.query_params.get("view") == "paper":
         [data-testid="stSidebarCollapsedControl"],
         header[data-testid="stHeader"],
         [data-testid="stToolbar"],
+        [data-testid="stDecoration"],
+        [data-testid="stStatusWidget"],
         footer { display: none !important; }
-        .main .block-container {
+        .stApp,
+        [data-testid="stAppViewContainer"],
+        section[data-testid="stMain"],
+        section.main {
+            background: #f7f9fc !important;
             padding: 0 !important;
             margin: 0 !important;
-            max-width: 100% !important;
         }
-        section.main iframe {
-            width: 100% !important;
+        [data-testid="stMainBlockContainer"],
+        .main .block-container,
+        .block-container {
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100vw !important;
+            width: 100vw !important;
+        }
+        section[data-testid="stMain"] iframe,
+        section.main iframe,
+        iframe {
+            position: fixed !important;
+            inset: 0 !important;
+            width: 100vw !important;
             height: 100vh !important;
             min-height: 100vh !important;
             border: none !important;
-            display: block !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            z-index: 999999 !important;
         }
         </style>
         """,
         unsafe_allow_html=True,
     )
     if os.path.exists(paper_html_path):
-        full_paper_html = load_research_paper_html(paper_html_path, os.path.join(BASE_DIR, "assets"))
-        components.html(full_paper_html, height=960, scrolling=True)
+        full_paper_html = load_research_paper_html(
+            paper_html_path,
+            os.path.join(BASE_DIR, "assets"),
+            os.path.getmtime(paper_html_path),
+        )
+        components.html(full_paper_html, height=1000, scrolling=True)
     else:
         st.error("Research_Paper_Interactive.html was not found in the repository.")
     st.stop()
@@ -1045,7 +1075,11 @@ elif active == "paper":
         st.session_state["show_paper_viewer"] = False
 
     if os.path.exists(paper_html_path):
-        viewer_html = load_research_paper_html(paper_html_path, os.path.join(BASE_DIR, "assets"))
+        viewer_html = load_research_paper_html(
+            paper_html_path,
+            os.path.join(BASE_DIR, "assets"),
+            os.path.getmtime(paper_html_path),
+        )
         act_c1, act_c2, act_c3, _ = st.columns([1.35, 1.15, 1.25, 1.25])
         act_c1.link_button(
             label="↗️ Open Paper in New Page",
