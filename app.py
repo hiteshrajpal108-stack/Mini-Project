@@ -30,18 +30,10 @@ st.markdown(
     """
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
-    /* Smooth scrolling & subtle page fade-in */
+    /* Smooth scrolling & custom thin scrollbar (no rerun flicker) */
     html, .stApp, section.main {
         scroll-behavior: smooth;
     }
-    @keyframes fadeSlideUp {
-        from { opacity: 0; transform: translateY(8px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    .main .block-container {
-        animation: fadeSlideUp 0.35s cubic-bezier(0.22, 1, 0.36, 1);
-    }
-    /* Custom thin scrollbar */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
     ::-webkit-scrollbar-thumb { background: rgba(45, 212, 191, 0.32); border-radius: 999px; }
@@ -104,9 +96,8 @@ st.markdown(
     div[data-testid="stExpander"] {
         border-radius: 14px !important;
         border: 1px solid rgba(148, 163, 184, 0.18) !important;
-        background: rgba(15, 23, 42, 0.55) !important;
-        backdrop-filter: blur(8px);
-        transition: border-color 0.22s ease, box-shadow 0.22s ease;
+        background: rgba(15, 23, 42, 0.62) !important;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
     div[data-testid="stExpander"]:hover {
         border-color: rgba(45, 212, 191, 0.38) !important;
@@ -1023,38 +1014,51 @@ elif active == "paper":
         with act_c1:
             components.html(
                 f"""
-                <style>
-                  body {{ margin: 0; padding: 0; background: transparent; font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; }}
+                <!DOCTYPE html>
+                <html><head><meta charset="utf-8"><style>
+                  html, body {{ margin: 0; padding: 0; overflow: hidden; background: transparent; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }}
                   .open-btn {{
                     display: flex; align-items: center; justify-content: center; gap: 6px;
-                    width: 100%; height: 40px; box-sizing: border-box;
+                    width: 100%; height: 39px; box-sizing: border-box; border: none;
                     border-radius: 12px; text-decoration: none;
                     font-weight: 600; font-size: 14px; color: #ffffff;
                     background: linear-gradient(90deg, #0d9488 0%, #0ea5e9 100%);
-                    box-shadow: 0 4px 14px rgba(13, 148, 136, 0.32);
-                    transition: transform 0.18s ease, box-shadow 0.18s ease;
+                    box-shadow: 0 2px 10px rgba(13, 148, 136, 0.28);
+                    transition: filter 0.18s ease, box-shadow 0.18s ease;
                     cursor: pointer;
                   }}
                   .open-btn:hover {{
-                    transform: translateY(-1px);
-                    box-shadow: 0 6px 20px rgba(20, 184, 166, 0.45);
+                    filter: brightness(1.08);
+                    box-shadow: 0 4px 14px rgba(20, 184, 166, 0.42);
                   }}
-                </style>
-                <a id="open-tab-link" class="open-btn" target="_blank" rel="noopener noreferrer">↗️ Open Paper in New Page</a>
+                </style></head><body>
+                <button id="open-tab-btn" class="open-btn" type="button">↗️ Open Paper in New Page</button>
                 <script>
                   (function() {{
                     const b64 = "{viewer_b64}";
-                    const binStr = atob(b64);
-                    const bytes = new Uint8Array(binStr.length);
-                    for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
-                    const blob = new Blob([bytes], {{ type: "text/html;charset=utf-8" }});
-                    const url = URL.createObjectURL(blob);
-                    const link = document.getElementById("open-tab-link");
-                    link.href = url;
+                    function decodeHtml() {{
+                      const binStr = atob(b64);
+                      const bytes = new Uint8Array(binStr.length);
+                      for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
+                      return new TextDecoder("utf-8").decode(bytes);
+                    }}
+                    document.getElementById("open-tab-btn").addEventListener("click", function() {{
+                      const html = decodeHtml();
+                      const win = window.open("", "_blank");
+                      if (win) {{
+                        win.document.open();
+                        win.document.write(html);
+                        win.document.close();
+                      }} else {{
+                        const blob = new Blob([html], {{ type: "text/html;charset=utf-8" }});
+                        window.open(URL.createObjectURL(blob), "_blank");
+                      }}
+                    }});
                   }})();
                 </script>
+                </body></html>
                 """,
-                height=44,
+                height=42,
             )
         toggle_label = "✖️ Close Preview" if st.session_state["show_paper_viewer"] else "👁️ Preview Inline"
         if act_c2.button(toggle_label, use_container_width=True):
