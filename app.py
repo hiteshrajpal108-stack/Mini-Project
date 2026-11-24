@@ -1018,12 +1018,49 @@ elif active == "paper":
 
     if os.path.exists(paper_html_path):
         viewer_html = load_research_paper_html(paper_html_path, os.path.join(BASE_DIR, "assets"))
-        act_c1, act_c2, _ = st.columns([1.2, 1.2, 2.6])
-        toggle_label = "✖️ Close Paper Viewer" if st.session_state["show_paper_viewer"] else "👁️ View Full Interactive Paper"
-        if act_c1.button(toggle_label, type="primary", use_container_width=True):
+        viewer_b64 = base64.b64encode(viewer_html.encode("utf-8")).decode("ascii")
+        act_c1, act_c2, act_c3, _ = st.columns([1.35, 1.15, 1.25, 1.25])
+        with act_c1:
+            components.html(
+                f"""
+                <style>
+                  body {{ margin: 0; padding: 0; background: transparent; font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; }}
+                  .open-btn {{
+                    display: flex; align-items: center; justify-content: center; gap: 6px;
+                    width: 100%; height: 40px; box-sizing: border-box;
+                    border-radius: 12px; text-decoration: none;
+                    font-weight: 600; font-size: 14px; color: #ffffff;
+                    background: linear-gradient(90deg, #0d9488 0%, #0ea5e9 100%);
+                    box-shadow: 0 4px 14px rgba(13, 148, 136, 0.32);
+                    transition: transform 0.18s ease, box-shadow 0.18s ease;
+                    cursor: pointer;
+                  }}
+                  .open-btn:hover {{
+                    transform: translateY(-1px);
+                    box-shadow: 0 6px 20px rgba(20, 184, 166, 0.45);
+                  }}
+                </style>
+                <a id="open-tab-link" class="open-btn" target="_blank" rel="noopener noreferrer">↗️ Open Paper in New Page</a>
+                <script>
+                  (function() {{
+                    const b64 = "{viewer_b64}";
+                    const binStr = atob(b64);
+                    const bytes = new Uint8Array(binStr.length);
+                    for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
+                    const blob = new Blob([bytes], {{ type: "text/html;charset=utf-8" }});
+                    const url = URL.createObjectURL(blob);
+                    const link = document.getElementById("open-tab-link");
+                    link.href = url;
+                  }})();
+                </script>
+                """,
+                height=44,
+            )
+        toggle_label = "✖️ Close Preview" if st.session_state["show_paper_viewer"] else "👁️ Preview Inline"
+        if act_c2.button(toggle_label, use_container_width=True):
             st.session_state["show_paper_viewer"] = not st.session_state["show_paper_viewer"]
             st.rerun()
-        act_c2.download_button(
+        act_c3.download_button(
             label="⬇️ Download Research Paper",
             data=viewer_html.encode("utf-8"),
             file_name="research_paper.html",
@@ -1032,7 +1069,7 @@ elif active == "paper":
         )
 
         if st.session_state["show_paper_viewer"]:
-            st.caption("Interactive full-text reader with clickable Table of Contents, figures, and glossary.")
+            st.caption("Inline reader preview — for the full-screen experience with search, dark mode & figure zoom, use Open Paper in New Page.")
             components.html(viewer_html, height=820, scrolling=True)
 
     with st.expander("🤖 Ask the MHQ Research Paper (Interactive Viva Q&A)", expanded=True):

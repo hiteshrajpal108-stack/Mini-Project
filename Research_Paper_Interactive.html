@@ -25,6 +25,41 @@
     --shadow-md:  0 4px 12px rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.04);
     --radius:     12px;
     --radius-sm:  8px;
+    --article-size: 15.5px;
+    --th-bg:      #f1f5f9;
+    --th-text:    #334155;
+    --tr-even:    #fafafa;
+    --tr-hover:   #f0fdfa;
+    --heading:    #0f172a;
+    --h3-color:   #1e293b;
+    --gloss-bg:   #f8fafc;
+    --gloss-text: #334155;
+    --toolbar-bg: rgba(255, 255, 255, 0.88);
+  }
+
+  html[data-theme="dark"] {
+    --bg:         #090e1a;
+    --card:       #111827;
+    --text:       #e2e8f0;
+    --muted:      #94a3b8;
+    --subtle:     #64748b;
+    --accent:     #14b8a6;
+    --accent-dk:  #2dd4bf;
+    --accent-lt:  rgba(20, 184, 166, 0.14);
+    --accent-mid: rgba(45, 212, 191, 0.35);
+    --border:     #1e293b;
+    --code-bg:    #1e293b;
+    --shadow-sm:  0 2px 8px rgba(0,0,0,.35);
+    --shadow-md:  0 8px 24px rgba(0,0,0,.45);
+    --th-bg:      #1e293b;
+    --th-text:    #e2e8f0;
+    --tr-even:    rgba(30, 41, 59, 0.45);
+    --tr-hover:   rgba(20, 184, 166, 0.12);
+    --heading:    #f8fafc;
+    --h3-color:   #e2e8f0;
+    --gloss-bg:   #1e293b;
+    --gloss-text: #cbd5e1;
+    --toolbar-bg: rgba(17, 24, 39, 0.88);
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -34,8 +69,156 @@
     background: var(--bg);
     color: var(--text);
     line-height: 1.75;
-    font-size: 15.5px;
+    font-size: var(--article-size);
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
+
+  /* ── Interactive Reader Toolbar ── */
+  #reader-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 900;
+    background: var(--toolbar-bg);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .tb-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: var(--accent-dk);
+  }
+  .tb-pill {
+    font-size: 0.74rem;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: var(--accent-lt);
+    border: 1px solid var(--accent-mid);
+    color: var(--accent-dk);
+  }
+  .tb-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .tb-search-wrap {
+    display: flex;
+    align-items: center;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 3px 10px;
+    gap: 5px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .tb-search-wrap:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-lt);
+  }
+  #paper-search {
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.82rem;
+    width: 190px;
+    outline: none;
+  }
+  #search-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    min-width: 36px;
+    text-align: center;
+  }
+  .tb-btn {
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .tb-btn:hover {
+    border-color: var(--accent);
+    background: var(--accent-lt);
+    color: var(--accent-dk);
+  }
+  .tb-btn-icon { padding: 2px 7px; border-radius: 6px; font-size: 0.75rem; }
+  mark.search-hit {
+    background: #fef08a;
+    color: #0f172a;
+    padding: 0 2px;
+    border-radius: 3px;
+  }
+  mark.search-hit.current-hit {
+    background: #f97316;
+    color: #ffffff;
+  }
+
+  /* ── Figure Lightbox ── */
+  #fig-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    background: rgba(9, 14, 26, 0.86);
+    backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s ease;
+  }
+  #fig-lightbox.open { opacity: 1; pointer-events: auto; }
+  #fig-lightbox img {
+    max-width: min(1100px, 94vw);
+    max-height: 80vh;
+    border-radius: 10px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    background: #ffffff;
+  }
+  #fig-lightbox-cap {
+    margin-top: 14px;
+    color: #e2e8f0;
+    font-size: 0.9rem;
+    max-width: 820px;
+    text-align: center;
+  }
+  #fig-lightbox-close {
+    position: absolute;
+    top: 18px;
+    right: 24px;
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.28);
+    color: #ffffff;
+    border-radius: 999px;
+    width: 38px;
+    height: 38px;
+    font-size: 1.2rem;
+    cursor: pointer;
+  }
+  figure img { cursor: zoom-in; }
 
   /* ── Layout ── */
   .page-wrap {
@@ -173,16 +356,16 @@
     margin-bottom: 12px;
     padding-bottom: 8px;
     border-bottom: 2px solid var(--border);
-    color: #0f172a;
-    scroll-margin-top: 24px;
+    color: var(--heading);
+    scroll-margin-top: 72px;
   }
   h3 {
     font-size: 1.0rem;
     font-weight: 700;
-    color: #1e293b;
+    color: var(--h3-color);
     margin-top: 24px;
     margin-bottom: 8px;
-    scroll-margin-top: 24px;
+    scroll-margin-top: 72px;
   }
   h4 {
     font-size: 0.92rem;
@@ -214,8 +397,8 @@
   .table-wrap { overflow-x: auto; margin: 16px 0 22px; }
   table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
   th, td { border: 1px solid var(--border); padding: 10px 13px; text-align: left; }
-  th { background: #f1f5f9; font-weight: 700; color: #334155; }
-  tr:nth-child(even) td { background: #fafafa; }
+  th { background: var(--th-bg); font-weight: 700; color: var(--th-text); }
+  tr:nth-child(even) td { background: var(--tr-even); }
   td code { font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
 
   /* ── Figures ── */
@@ -269,7 +452,7 @@
     padding: 10px 16px;
     font-weight: 600;
     font-size: 0.9rem;
-    background: #f8fafc;
+    background: var(--gloss-bg);
     color: var(--accent-dk);
     list-style: none;
   }
@@ -277,7 +460,7 @@
   .glossary summary::before { content: '▶ '; font-size: 0.7em; }
   .glossary details[open] summary::before { content: '▼ '; }
   .glossary details[open] { border-color: var(--accent); }
-  .glossary .gloss-body { padding: 10px 16px; font-size: 0.9rem; color: #334155; }
+  .glossary .gloss-body { padding: 10px 16px; font-size: 0.9rem; color: var(--gloss-text); }
 
   /* ── Subscore bar chart (pure CSS) ── */
   .bar-chart { margin: 16px 0; }
@@ -313,7 +496,7 @@
 
   /* ── Print ── */
   @media print {
-    .toc, nav, #read-progress, #back-to-top { display: none !important; }
+    .toc, nav, #reader-toolbar, #fig-lightbox, #read-progress, #back-to-top { display: none !important; }
     .page-wrap { grid-template-columns: 1fr; }
     article { box-shadow: none; border: none; padding: 0; }
   }
@@ -326,10 +509,10 @@
   figure { transition: box-shadow 0.25s ease, transform 0.25s cubic-bezier(0.22, 1, 0.36, 1); }
   figure:hover { box-shadow: var(--shadow-md); }
   tbody tr { transition: background-color 0.15s ease; }
-  tbody tr:hover td { background: #f0fdfa !important; }
+  tbody tr:hover td { background: var(--tr-hover) !important; }
   .glossary details { transition: border-color 0.2s ease, box-shadow 0.2s ease; }
   .glossary summary { transition: background-color 0.18s ease; }
-  .glossary summary:hover { background: #f1f5f9; }
+  .glossary summary:hover { background: var(--th-bg); }
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
     *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
@@ -351,6 +534,25 @@
 </head>
 <body>
 <div id="read-progress" aria-hidden="true"></div>
+
+<nav id="reader-toolbar" aria-label="Paper reader controls">
+  <div class="tb-brand">
+    <span>MHQ Interactive Research Paper</span>
+    <span class="tb-pill" id="read-time-pill">~12 min read</span>
+  </div>
+  <div class="tb-controls">
+    <div class="tb-search-wrap">
+      <input id="paper-search" type="search" placeholder="Search paper..." aria-label="Search paper text" />
+      <span id="search-count">0/0</span>
+      <button type="button" class="tb-btn tb-btn-icon" id="search-prev" title="Previous match">↑</button>
+      <button type="button" class="tb-btn tb-btn-icon" id="search-next" title="Next match">↓</button>
+    </div>
+    <button type="button" class="tb-btn" id="font-dec" title="Decrease font size">A−</button>
+    <button type="button" class="tb-btn" id="font-inc" title="Increase font size">A+</button>
+    <button type="button" class="tb-btn" id="theme-toggle" title="Toggle Light/Dark theme">🌙 Dark</button>
+    <button type="button" class="tb-btn" id="print-paper" title="Print or Save as PDF">🖨️ Print / PDF</button>
+  </div>
+</nav>
 
 <div class="page-wrap">
 
@@ -953,6 +1155,12 @@
 
 <button id="back-to-top" type="button" aria-label="Back to top">↑ Top</button>
 
+<div id="fig-lightbox" role="dialog" aria-modal="true" aria-label="Figure zoom viewer">
+  <button id="fig-lightbox-close" type="button" aria-label="Close figure viewer">×</button>
+  <img id="fig-lightbox-img" src="" alt="" />
+  <div id="fig-lightbox-cap"></div>
+</div>
+
 <script>
   // Active TOC highlight on scroll
   const sections = document.querySelectorAll('section[id], h2[id], h3[id]');
@@ -999,6 +1207,158 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   }
+
+  // Dynamic reading time estimate
+  const articleEl = document.querySelector('article');
+  const readTimePill = document.getElementById('read-time-pill');
+  if (articleEl && readTimePill) {
+    const words = (articleEl.innerText || '').trim().split(/\s+/).length;
+    const mins = Math.max(1, Math.round(words / 220));
+    readTimePill.textContent = `~${mins} min read · ${words.toLocaleString()} words`;
+  }
+
+  // Font size controls
+  let fontSize = 15.5;
+  const setFontSize = (sz) => {
+    fontSize = Math.min(19.5, Math.max(13.5, sz));
+    document.documentElement.style.setProperty('--article-size', fontSize + 'px');
+  };
+  document.getElementById('font-inc')?.addEventListener('click', () => setFontSize(fontSize + 1));
+  document.getElementById('font-dec')?.addEventListener('click', () => setFontSize(fontSize - 1));
+
+  // Light / Dark theme toggle
+  const themeBtn = document.getElementById('theme-toggle');
+  const applyTheme = (theme) => {
+    if (theme === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      if (themeBtn) themeBtn.textContent = '☀️ Light';
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+      if (themeBtn) themeBtn.textContent = '🌙 Dark';
+    }
+  };
+  try {
+    const savedTheme = localStorage.getItem('mhq_paper_theme');
+    if (savedTheme === 'dark') applyTheme('dark');
+  } catch (e) {}
+  themeBtn?.addEventListener('click', () => {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const next = isDark ? 'light' : 'dark';
+    applyTheme(next);
+    try { localStorage.setItem('mhq_paper_theme', next); } catch (e) {}
+  });
+
+  // Print / PDF
+  document.getElementById('print-paper')?.addEventListener('click', () => window.print());
+
+  // Live in-paper search & highlight
+  const searchInput = document.getElementById('paper-search');
+  const searchCount = document.getElementById('search-count');
+  let hits = [];
+  let hitIdx = -1;
+
+  const clearHighlights = () => {
+    if (!articleEl) return;
+    articleEl.querySelectorAll('mark.search-hit').forEach(mark => {
+      const parent = mark.parentNode;
+      parent.replaceChild(document.createTextNode(mark.textContent), mark);
+      parent.normalize();
+    });
+    hits = [];
+    hitIdx = -1;
+  };
+
+  const focusHit = (idx) => {
+    if (!hits.length) {
+      if (searchCount) searchCount.textContent = '0/0';
+      return;
+    }
+    hits.forEach(h => h.classList.remove('current-hit'));
+    hitIdx = ((idx % hits.length) + hits.length) % hits.length;
+    const cur = hits[hitIdx];
+    cur.classList.add('current-hit');
+    const det = cur.closest('details');
+    if (det) det.open = true;
+    cur.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (searchCount) searchCount.textContent = `${hitIdx + 1}/${hits.length}`;
+  };
+
+  const runSearch = (query) => {
+    clearHighlights();
+    const q = (query || '').trim();
+    if (!q || q.length < 2 || !articleEl) {
+      if (searchCount) searchCount.textContent = '0/0';
+      return;
+    }
+    const walker = document.createTreeWalker(articleEl, NodeFilter.SHOW_TEXT, {
+      acceptNode: (node) => {
+        if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+        const tag = node.parentElement?.tagName;
+        if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'MARK') return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    const textNodes = [];
+    while (walker.nextNode()) textNodes.push(walker.currentNode);
+    const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    textNodes.forEach(node => {
+      const val = node.nodeValue;
+      let match;
+      let lastIdx = 0;
+      const frag = document.createDocumentFragment();
+      let found = false;
+      re.lastIndex = 0;
+      while ((match = re.exec(val)) !== null) {
+        found = true;
+        if (match.index > lastIdx) frag.appendChild(document.createTextNode(val.slice(lastIdx, match.index)));
+        const mark = document.createElement('mark');
+        mark.className = 'search-hit';
+        mark.textContent = match[0];
+        frag.appendChild(mark);
+        hits.push(mark);
+        lastIdx = match.index + match[0].length;
+      }
+      if (found) {
+        if (lastIdx < val.length) frag.appendChild(document.createTextNode(val.slice(lastIdx)));
+        node.parentNode.replaceChild(frag, node);
+      }
+    });
+    focusHit(0);
+  };
+
+  let searchTimer;
+  searchInput?.addEventListener('input', (e) => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => runSearch(e.target.value), 160);
+  });
+  searchInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      focusHit(e.shiftKey ? hitIdx - 1 : hitIdx + 1);
+    }
+  });
+  document.getElementById('search-next')?.addEventListener('click', () => focusHit(hitIdx + 1));
+  document.getElementById('search-prev')?.addEventListener('click', () => focusHit(hitIdx - 1));
+
+  // Click-to-zoom figure lightbox
+  const lightbox = document.getElementById('fig-lightbox');
+  const lbImg = document.getElementById('fig-lightbox-img');
+  const lbCap = document.getElementById('fig-lightbox-cap');
+  document.querySelectorAll('figure').forEach(fig => {
+    const img = fig.querySelector('img');
+    const cap = fig.querySelector('figcaption');
+    if (img) {
+      img.addEventListener('click', () => {
+        if (lbImg) { lbImg.src = img.src; lbImg.alt = img.alt; }
+        if (lbCap) lbCap.innerHTML = cap ? cap.innerHTML : img.alt;
+        lightbox?.classList.add('open');
+      });
+    }
+  });
+  const closeLightbox = () => lightbox?.classList.remove('open');
+  document.getElementById('fig-lightbox-close')?.addEventListener('click', closeLightbox);
+  lightbox?.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
 </script>
 </body>
 </html>
