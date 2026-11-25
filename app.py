@@ -974,6 +974,7 @@ def render_prediction_results(selected_age: str, selected_sex: str, selected_inc
     with g_col:
         with st.container(border=True):
             if bins_df is not None and not bins_df.empty:
+                st.markdown("**Position in Population MHQ Distribution (`N = 240,012`)**")
                 dist_df = bins_df.groupby("bin_center", as_index=False)["count"].sum().sort_values("bin_center")
                 fig_pos = go.Figure()
                 fig_pos.add_trace(
@@ -984,15 +985,15 @@ def render_prediction_results(selected_age: str, selected_sex: str, selected_inc
                         fill="tozeroy",
                         line=dict(color="#14b8a6", width=2.2),
                         fillcolor="rgba(20, 184, 166, 0.16)",
-                        name="Population (N=240,012)",
+                        name="Population",
                         hovertemplate="MHQ Score: %{x:.0f}<br>Respondents: %{y:,}<extra></extra>",
                     )
                 )
                 max_y = float(dist_df["count"].max()) if not dist_df.empty else 1000.0
                 for label_txt, x_val, col_hex, dash_style in [
-                    (f"Your Prediction ({pred:.1f})", pred, "#2dd4bf", "solid"),
-                    (f"Study Mean ({STUDY_MEAN_MHQ:.2f})", STUDY_MEAN_MHQ, "#f59e0b", "dash"),
-                    (f"Study Median ({STUDY_MEDIAN_MHQ:.1f})", STUDY_MEDIAN_MHQ, "#818cf8", "dot"),
+                    (f"Prediction ({pred:.1f})", pred, "#2dd4bf", "solid"),
+                    (f"Mean ({STUDY_MEAN_MHQ:.2f})", STUDY_MEAN_MHQ, "#f59e0b", "dash"),
+                    (f"Median ({STUDY_MEDIAN_MHQ:.1f})", STUDY_MEDIAN_MHQ, "#818cf8", "dot"),
                 ]:
                     fig_pos.add_trace(
                         go.Scatter(
@@ -1006,15 +1007,18 @@ def render_prediction_results(selected_age: str, selected_sex: str, selected_inc
                     )
                 style_plotly(
                     fig_pos,
-                    height=300,
-                    margin=dict(l=16, r=16, t=42, b=16),
-                    title=dict(text="Position in Population MHQ Distribution (N = 240,012)", font=dict(size=14, color="#e2e8f0")),
+                    height=275,
+                    margin=dict(l=16, r=16, t=44, b=44),
                     xaxis=dict(range=[-100, 200], tickvals=[-100, -50, 0, 50, 100, 150, 200], title="MHQ Score (−100 to +200)"),
                     yaxis=dict(title="Respondents", showticklabels=True),
-                    legend=dict(orientation="h", yanchor="bottom", y=-0.34, xanchor="center", x=0.5, font=dict(size=11)),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(size=11)),
                     hovermode="x unified",
                 )
-                st.plotly_chart(fig_pos, use_container_width=True)
+                st.plotly_chart(fig_pos, use_container_width=True, config={"displayModeBar": False})
+                st.caption(
+                    f"**How to Explain:** The bimodal curve reflects all 240,012 scores (negative scores compress near 0 under MHQ scaling). "
+                    f"This profile (**{pred:.2f}**) sits at the **{percentile:.0f}th percentile** vs. Mean (**67.65**) and Median (**77.6**)."
+                )
             else:
                 fig_gauge = go.Figure(
                     go.Indicator(
@@ -1031,7 +1035,7 @@ def render_prediction_results(selected_age: str, selected_sex: str, selected_inc
                     )
                 )
                 style_plotly(fig_gauge, height=280, margin=dict(l=24, r=24, t=48, b=24))
-                st.plotly_chart(fig_gauge, use_container_width=True)
+                st.plotly_chart(fig_gauge, use_container_width=True, config={"displayModeBar": False})
 
     with a_col:
         if pred >= 100:
@@ -1068,50 +1072,55 @@ def render_prediction_results(selected_age: str, selected_sex: str, selected_inc
     tab_traj, tab_guide = st.tabs(["Life-Course Age Trajectory", "Evidence-Based Well-Being Guidance"])
 
     with tab_traj:
-        traj_scores = [predict_mhq(model, age_lbl, selected_sex, selected_income) for age_lbl in AGE_ORDER]
-        traj_df = pd.DataFrame({"Age Bracket": AGE_ORDER, "Predicted MHQ": traj_scores})
-        fig_traj = go.Figure()
-        fig_traj.add_trace(
-            go.Scatter(
-                x=traj_df["Age Bracket"],
-                y=traj_df["Predicted MHQ"],
-                mode="lines+markers",
-                line=dict(color="#38bdf8", width=2.5),
-                marker=dict(size=7, color="#38bdf8"),
-                name=f"Trajectory ({selected_sex}, {selected_income})",
-                hovertemplate="Age %{x}<br>Predicted MHQ: %{y:.2f}<extra></extra>",
+        with st.container(border=True):
+            st.markdown(f"**Predicted MHQ Across Life Course (`{selected_sex}` · `{selected_income}`)**")
+            traj_scores = [predict_mhq(model, age_lbl, selected_sex, selected_income) for age_lbl in AGE_ORDER]
+            traj_df = pd.DataFrame({"Age Bracket": AGE_ORDER, "Predicted MHQ": traj_scores})
+            fig_traj = go.Figure()
+            fig_traj.add_trace(
+                go.Scatter(
+                    x=traj_df["Age Bracket"],
+                    y=traj_df["Predicted MHQ"],
+                    mode="lines+markers",
+                    line=dict(color="#38bdf8", width=2.5),
+                    marker=dict(size=7, color="#38bdf8"),
+                    name="Cohort Trajectory",
+                    hovertemplate="Age %{x}<br>Predicted MHQ: %{y:.2f}<extra></extra>",
+                )
             )
-        )
-        fig_traj.add_trace(
-            go.Scatter(
-                x=[selected_age],
-                y=[pred],
-                mode="markers",
-                marker=dict(size=14, color="#2dd4bf", line=dict(color="#ffffff", width=2)),
-                name=f"Selected Age ({selected_age}: {pred:.2f})",
-                hovertemplate=f"Selected ({selected_age}): {pred:.2f}<extra></extra>",
+            fig_traj.add_trace(
+                go.Scatter(
+                    x=[selected_age],
+                    y=[pred],
+                    mode="markers",
+                    marker=dict(size=13, color="#2dd4bf", line=dict(color="#ffffff", width=2)),
+                    name=f"Selected ({selected_age}: {pred:.2f})",
+                    hovertemplate=f"Selected ({selected_age}): {pred:.2f}<extra></extra>",
+                )
             )
-        )
-        fig_traj.add_hline(
-            y=STUDY_MEAN_MHQ,
-            line_dash="dash",
-            line_color="#f59e0b",
-            annotation_text=f"Study Mean ({STUDY_MEAN_MHQ:.2f})",
-            annotation_position="bottom right",
-        )
-        y_min = min(-10.0, min(traj_scores) - 15.0)
-        y_max = max(125.0, max(traj_scores) + 15.0)
-        style_plotly(
-            fig_traj,
-            height=290,
-            margin=dict(l=20, r=20, t=42, b=20),
-            title=dict(text=f"Predicted MHQ Across Life Course ({selected_sex} · {selected_income})", font=dict(size=14, color="#e2e8f0")),
-            xaxis=dict(title="Age Cohort"),
-            yaxis=dict(title="Predicted MHQ", range=[y_min, y_max]),
-            legend=dict(orientation="h", yanchor="bottom", y=-0.34, xanchor="center", x=0.5, font=dict(size=11)),
-            hovermode="x unified",
-        )
-        st.plotly_chart(fig_traj, use_container_width=True)
+            fig_traj.add_hline(
+                y=STUDY_MEAN_MHQ,
+                line_dash="dash",
+                line_color="#f59e0b",
+                annotation_text=f"Study Mean ({STUDY_MEAN_MHQ:.2f})",
+                annotation_position="bottom right",
+            )
+            y_min = min(-10.0, min(traj_scores) - 15.0)
+            y_max = max(125.0, max(traj_scores) + 15.0)
+            style_plotly(
+                fig_traj,
+                height=280,
+                margin=dict(l=16, r=16, t=42, b=44),
+                xaxis=dict(title="Age Cohort"),
+                yaxis=dict(title="Predicted MHQ", range=[y_min, y_max]),
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(size=11)),
+                hovermode="x unified",
+            )
+            st.plotly_chart(fig_traj, use_container_width=True, config={"displayModeBar": False})
+            st.caption(
+                "**How to Explain:** Holding Biological Sex and Income constant, the model shows how predicted MHQ rises steadily with age—demonstrating "
+                "why Age brackets carry **57.7%** of total Random Forest importance (`F = 3,176.39`, `p < 0.0001`)."
+            )
 
     with tab_guide:
         if st.button("Generate Evidence-Based Well-Being Guidance", type="primary", key=f"ai_btn_{key_prefix}_{selected_age}_{selected_sex}_{selected_income}"):
@@ -1370,6 +1379,7 @@ elif active == "explorer":
             st.plotly_chart(fig_age, use_container_width=True)
 
         with g2:
+            st.markdown("**All 5 MHQ Dimensions Across Age Groups**")
             melted = age_grp.melt(id_vars="age", var_name="Dimension", value_name="Mean Score")
             fig_sub = px.line(
                 melted,
@@ -1378,11 +1388,16 @@ elif active == "explorer":
                 color="Dimension",
                 markers=True,
                 color_discrete_sequence=["#2dd4bf", "#38bdf8", "#818cf8", "#a78bfa", "#34d399"],
-                title="All 5 MHQ Dimensions Across Age Groups",
                 labels={"age": "Age Group", "Mean Score": "Mean Score"},
             )
-            style_plotly(fig_sub, height=390, hovermode="x unified", legend=dict(orientation="h", y=-0.25))
-            st.plotly_chart(fig_sub, use_container_width=True)
+            style_plotly(
+                fig_sub,
+                height=360,
+                margin=dict(l=20, r=20, t=54, b=44),
+                hovermode="x unified",
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, title_text="", font=dict(size=10)),
+            )
+            st.plotly_chart(fig_sub, use_container_width=True, config={"displayModeBar": False})
 
         if income_df is not None and not income_df.empty:
             fig_inc = px.bar(
