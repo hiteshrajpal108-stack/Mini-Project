@@ -807,6 +807,16 @@ def load_research_paper_html(paper_path: str, assets_dir: str, cache_key: float 
     with open(paper_path, "r", encoding="utf-8") as f:
         html_str = f.read()
 
+    css_path = os.path.join(os.path.dirname(paper_path), "paper_style.css")
+    if os.path.exists(css_path):
+        with open(css_path, "r", encoding="utf-8") as cf:
+            html_str = re.sub(r'<link\s+rel="stylesheet"\s+href="paper_style\.css"\s*/?>', f"<style>\n{cf.read()}\n</style>", html_str)
+
+    js_path = os.path.join(os.path.dirname(paper_path), "paper_script.js")
+    if os.path.exists(js_path):
+        with open(js_path, "r", encoding="utf-8") as jf:
+            html_str = re.sub(r'<script\s+src="paper_script\.js"></script>', f"<script>\n{jf.read()}\n</script>", html_str)
+
     def _replace_src(match: re.Match) -> str:
         rel_path = match.group(1)
         img_path = os.path.join(assets_dir, os.path.basename(rel_path))
