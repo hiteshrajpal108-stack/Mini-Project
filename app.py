@@ -33,7 +33,8 @@ PLOTLY_LAYOUT = dict(
 
 def style_plotly(fig, **layout_kwargs):
     """Apply cohesive dark-glass styling and subtle gridlines to any Plotly figure."""
-    fig.update_layout(**PLOTLY_LAYOUT, **layout_kwargs)
+    merged = {**PLOTLY_LAYOUT, **layout_kwargs}
+    fig.update_layout(**merged)
     fig.update_xaxes(gridcolor="rgba(255,255,255,0.06)", zerolinecolor="rgba(255,255,255,0.10)")
     fig.update_yaxes(gridcolor="rgba(255,255,255,0.06)", zerolinecolor="rgba(255,255,255,0.10)")
     return fig
