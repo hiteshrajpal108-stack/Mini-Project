@@ -720,6 +720,19 @@ def ask_research_paper_ai(question: str) -> tuple[str, bool]:
             "(**+74.4 pts** via higher energy), employment stability (**+76.7 pts**), daily exercise (**+45.6 pts**), and socializing "
             "(**+40.9 pts**)—explain far more variation than static demographics alone."
         )
+    elif any(k in q for k in ("random forest", "pipeline", "leakage", "gender", "polars", "clean", "null", "method", "model")):
+        fallback = (
+            "**Methodology & Engineering Highlights:** We profiled the 362 MB raw CSV (`240,012 × 207`) using Polars Lazy API, "
+            "remediated **100% missingness in `gender`** by switching to `biological_sex` (`239,995` valid records), and normalized currencies into 10 INR brackets. "
+            "To prevent data leakage, preprocessing (`SimpleImputer` + `OneHotEncoder`) is chained inside a `scikit-learn` `Pipeline` before training a "
+            "100-tree `RandomForestRegressor` (`max_depth=10`, 80/20 split), yielding **R² = 0.1348** and **RMSE = 67.24**."
+        )
+    elif any(k in q for k in ("satiation", "inr", "bracket", "money", "wealth", "peak")):
+        fallback = (
+            "**Income Satiation Effect (INR):** Mean MHQ increases from **49.64** (`< ₹1,00,000`) through middle-income tiers to a peak of "
+            "**108.33** at **₹85L–2.1Cr**, then declines by 17.34 points to **90.99** above **₹2.1Cr**. Chi-Square (χ² = 1,666.66, df = 60, p < 0.0001) "
+            "also confirms Household Income and Biological Sex are statistically dependent."
+        )
     elif any(k in q for k in ("loneliness", "inventory", "medical", "permut", "future", "social self", "li")):
         fallback = (
             "**Future Scope: Loneliness Inventory (LI) Cross-Scale Permutation Validation:** "
@@ -952,11 +965,14 @@ def render_prediction_results(selected_age: str, selected_sex: str, selected_inc
     delta_med = pred - STUDY_MEDIAN_MHQ
     tier = mhq_category(pred)
 
+    percentile_str = "N/A"
     percentile = 50.0
     if bins_df is not None and not bins_df.empty:
         tot = bins_df["count"].sum()
-        below = bins_df.loc[bins_df["bin_center"] <= pred, "count"].sum()
-        percentile = (below / tot) * 100 if tot > 0 else 50.0
+        if tot > 0:
+            below = bins_df.loc[bins_df["bin_center"] <= pred, "count"].sum()
+            percentile = (below / tot) * 100
+            percentile_str = f"{percentile:.0f}th"
 
     cohort_n = 0
     if summary_df is not None and not summary_df.empty:
@@ -965,8 +981,8 @@ def render_prediction_results(selected_age: str, selected_sex: str, selected_inc
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("Predicted MHQ", f"{pred:.2f}", f"{delta_mean:+.2f} vs. Mean")
     m2.metric("Well-Being Tier", tier)
-    m3.metric("Study Percentile", f"{percentile:.0f}th")
-    m4.metric("Age Cohort Size", f"{cohort_n:,}")
+    m3.metric("Study Percentile", percentile_str)
+    m4.metric("Age Cohort Size", f"{cohort_n:,}" if cohort_n > 0 else "N/A")
 
     st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
     g_col, a_col = st.columns([1.45, 1.15])
@@ -1123,11 +1139,14 @@ def render_prediction_results(selected_age: str, selected_sex: str, selected_inc
             )
 
     with tab_guide:
+        guide_cache_key = f"guide_cache_{key_prefix}_{selected_age}_{selected_sex}_{selected_income}"
         if st.button("Generate Evidence-Based Well-Being Guidance", type="primary", key=f"ai_btn_{key_prefix}_{selected_age}_{selected_sex}_{selected_income}"):
             with st.spinner("Synthesizing tier-specific guidance and research sources..."):
-                advice_text, badge_label, source_links, google_search_url = get_ai_wellbeing_advice(
+                st.session_state[guide_cache_key] = get_ai_wellbeing_advice(
                     selected_age, selected_sex, selected_income, pred, tier
                 )
+        if guide_cache_key in st.session_state:
+            advice_text, badge_label, source_links, google_search_url = st.session_state[guide_cache_key]
             with st.container(border=True):
                 st.markdown(f'<div class="ai-badge">{badge_label}</div>', unsafe_allow_html=True)
                 st.markdown(advice_text)
@@ -1260,22 +1279,35 @@ if active == "prediction":
                     "Profile": [f"Profile A ({age_a}, {sex_a})", f"Profile B ({age_b}, {sex_b})", "Study Mean"],
                     "MHQ Score": [round(score_a, 2), round(score_b, 2), STUDY_MEAN_MHQ],
                     "Tier": [mhq_category(score_a), mhq_category(score_b), mhq_category(STUDY_MEAN_MHQ)],
+                    "Income": [inc_a, inc_b, "All Cohorts (N=240,012)"],
                 }
             )
-            fig_cmp = px.bar(
-                cmp_df,
-                x="MHQ Score",
-                y="Profile",
-                orientation="h",
-                text="MHQ Score",
-                hover_data=["Tier"],
-                color="Profile",
-                color_discrete_sequence=["#38bdf8", "#14b8a6", "#f59e0b"],
-                title="Side-by-Side MHQ Score Comparison",
-            )
-            fig_cmp.update_traces(texttemplate="%{text:.1f}", textposition="outside")
-            style_plotly(fig_cmp, showlegend=False, height=280, xaxis=dict(range=[-100, 215], title="Predicted Overall MHQ Score (−100 to +200)"), yaxis_title="")
-            st.plotly_chart(fig_cmp, use_container_width=True)
+            with st.container(border=True):
+                st.markdown("**Side-by-Side MHQ Score Comparison**")
+                fig_cmp = px.bar(
+                    cmp_df,
+                    x="MHQ Score",
+                    y="Profile",
+                    orientation="h",
+                    text="MHQ Score",
+                    hover_data=["Tier", "Income"],
+                    color="Profile",
+                    color_discrete_sequence=["#38bdf8", "#14b8a6", "#f59e0b"],
+                )
+                fig_cmp.update_traces(texttemplate="%{text:.1f}", textposition="outside")
+                style_plotly(
+                    fig_cmp,
+                    showlegend=False,
+                    height=265,
+                    margin=dict(l=16, r=24, t=16, b=40),
+                    xaxis=dict(range=[-100, 215], title="Predicted Overall MHQ Score (−100 to +200)"),
+                    yaxis_title="",
+                )
+                st.plotly_chart(fig_cmp, use_container_width=True, config={"displayModeBar": False})
+                st.caption(
+                    f"**Comparison Summary:** Profile A (`{age_a}`, `{sex_a}`, `{inc_a}`) = **{score_a:.2f}** ({mhq_category(score_a)}) · "
+                    f"Profile B (`{age_b}`, `{sex_b}`, `{inc_b}`) = **{score_b:.2f}** ({mhq_category(score_b)}) · Delta: **{diff_ba:+.2f} pts**."
+                )
 
 elif active == "explorer":
     st.subheader("MHQ Score Distribution & Demographic Trends")
@@ -1320,26 +1352,29 @@ elif active == "explorer":
         c2.metric("Mean MHQ Score", f"{weighted_mean:.2f}" if total_n > 0 else "N/A")
         c3.metric("Median MHQ Score", f"{weighted_median:.2f}" if total_n > 0 else "N/A")
 
-        if not filt_bins.empty:
-            hist_agg = filt_bins.groupby("bin_center", as_index=False)["count"].sum()
-            fig_hist = px.bar(
-                hist_agg,
-                x="bin_center",
-                y="count",
-                title=f"MHQ Score Distribution (Age: {age_filter}, Sex: {sex_filter})",
-                labels={"bin_center": "Overall MHQ Score", "count": "Respondents"},
-                color_discrete_sequence=["#14b8a6"],
-            )
-            if not np.isnan(weighted_mean):
-                fig_hist.add_vline(
-                    x=weighted_mean,
-                    line_dash="dash",
-                    line_color="#f59e0b",
-                    annotation_text=f"Group Mean ({weighted_mean:.1f})",
-                    annotation_position="top right",
+        if total_n == 0 or filt_bins.empty:
+            st.info("No survey respondents match this exact Age + Biological Sex combination. Try setting either filter back to `All`.")
+        else:
+            with st.container(border=True):
+                st.markdown(f"**MHQ Score Distribution (`Age: {age_filter}` · `Sex: {sex_filter}`)**")
+                hist_agg = filt_bins.groupby("bin_center", as_index=False)["count"].sum()
+                fig_hist = px.bar(
+                    hist_agg,
+                    x="bin_center",
+                    y="count",
+                    labels={"bin_center": "Overall MHQ Score (−100 to +200)", "count": "Respondents"},
+                    color_discrete_sequence=["#14b8a6"],
                 )
-            style_plotly(fig_hist, height=360, bargap=0.06)
-            st.plotly_chart(fig_hist, use_container_width=True)
+                if not np.isnan(weighted_mean):
+                    fig_hist.add_vline(
+                        x=weighted_mean,
+                        line_dash="dash",
+                        line_color="#f59e0b",
+                        annotation_text=f"Group Mean ({weighted_mean:.1f})",
+                        annotation_position="top right",
+                    )
+                style_plotly(fig_hist, height=340, margin=dict(l=16, r=16, t=24, b=40), bargap=0.06)
+                st.plotly_chart(fig_hist, use_container_width=True, config={"displayModeBar": False})
 
         age_grp = (
             summary_df[summary_df["age"].isin(AGE_ORDER)]
@@ -1360,65 +1395,75 @@ elif active == "explorer":
 
         g1, g2 = st.columns(2)
         with g1:
-            fig_age = px.bar(
-                age_grp,
-                x="age",
-                y="Overall MHQ",
-                color="Overall MHQ",
-                color_continuous_scale="Tealgrn",
-                title="Mean Overall MHQ Score by Age Group",
-                labels={"age": "Age Group", "Overall MHQ": "Mean MHQ Score"},
-            )
-            fig_age.add_hline(
-                y=STUDY_MEAN_MHQ,
-                line_dash="dash",
-                line_color="#f59e0b",
-                annotation_text=f"Study Mean ({STUDY_MEAN_MHQ:.1f})",
-            )
-            style_plotly(fig_age, height=390, coloraxis_showscale=False)
-            st.plotly_chart(fig_age, use_container_width=True)
+            with st.container(border=True):
+                st.markdown("**Mean Overall MHQ Score by Age Group**")
+                fig_age = px.bar(
+                    age_grp,
+                    x="age",
+                    y="Overall MHQ",
+                    color="Overall MHQ",
+                    color_continuous_scale="Tealgrn",
+                    labels={"age": "Age Group", "Overall MHQ": "Mean MHQ Score"},
+                )
+                fig_age.add_hline(
+                    y=STUDY_MEAN_MHQ,
+                    line_dash="dash",
+                    line_color="#f59e0b",
+                    annotation_text=f"Study Mean ({STUDY_MEAN_MHQ:.1f})",
+                )
+                style_plotly(fig_age, height=360, margin=dict(l=16, r=16, t=24, b=44), coloraxis_showscale=False)
+                st.plotly_chart(fig_age, use_container_width=True, config={"displayModeBar": False})
 
         with g2:
-            st.markdown("**All 5 MHQ Dimensions Across Age Groups**")
-            melted = age_grp.melt(id_vars="age", var_name="Dimension", value_name="Mean Score")
-            fig_sub = px.line(
-                melted,
-                x="age",
-                y="Mean Score",
-                color="Dimension",
-                markers=True,
-                color_discrete_sequence=["#2dd4bf", "#38bdf8", "#818cf8", "#a78bfa", "#34d399"],
-                labels={"age": "Age Group", "Mean Score": "Mean Score"},
-            )
-            style_plotly(
-                fig_sub,
-                height=360,
-                margin=dict(l=20, r=20, t=54, b=44),
-                hovermode="x unified",
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, title_text="", font=dict(size=10)),
-            )
-            st.plotly_chart(fig_sub, use_container_width=True, config={"displayModeBar": False})
+            with st.container(border=True):
+                st.markdown("**All 5 MHQ Dimensions Across Age Groups**")
+                melted = age_grp.melt(id_vars="age", var_name="Dimension", value_name="Mean Score")
+                fig_sub = px.line(
+                    melted,
+                    x="age",
+                    y="Mean Score",
+                    color="Dimension",
+                    markers=True,
+                    color_discrete_sequence=["#2dd4bf", "#38bdf8", "#818cf8", "#a78bfa", "#34d399"],
+                    labels={"age": "Age Group", "Mean Score": "Mean Score"},
+                )
+                style_plotly(
+                    fig_sub,
+                    height=360,
+                    margin=dict(l=16, r=16, t=54, b=44),
+                    hovermode="x unified",
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, title_text="", font=dict(size=10)),
+                )
+                st.plotly_chart(fig_sub, use_container_width=True, config={"displayModeBar": False})
 
         if income_df is not None and not income_df.empty:
-            fig_inc = px.bar(
-                income_df,
-                x="mean_mhq",
-                y="income_inr",
-                orientation="h",
-                color="mean_mhq",
-                color_continuous_scale="Teal",
-                hover_data={"count": ":,", "median_mhq": ":.1f", "mean_mhq": ":.2f"},
-                title="Mean Overall MHQ Score by Household Income (INR)",
-                labels={"mean_mhq": "Mean Overall MHQ Score", "income_inr": "Household Income (INR)", "count": "Respondents", "median_mhq": "Median MHQ"},
-            )
-            fig_inc.add_vline(
-                x=STUDY_MEAN_MHQ,
-                line_dash="dash",
-                line_color="#f59e0b",
-                annotation_text=f"Study Mean ({STUDY_MEAN_MHQ:.1f})",
-            )
-            style_plotly(fig_inc, height=420, coloraxis_showscale=False, yaxis=dict(categoryorder="array", categoryarray=income_df["income_inr"].tolist()[::-1]))
-            st.plotly_chart(fig_inc, use_container_width=True)
+            with st.container(border=True):
+                st.markdown("**Mean Overall MHQ Score by Household Income (INR)**")
+                fig_inc = px.bar(
+                    income_df,
+                    x="mean_mhq",
+                    y="income_inr",
+                    orientation="h",
+                    color="mean_mhq",
+                    color_continuous_scale="Teal",
+                    hover_data={"count": ":,", "median_mhq": ":.1f", "mean_mhq": ":.2f"},
+                    labels={"mean_mhq": "Mean Overall MHQ Score", "income_inr": "Household Income (INR)", "count": "Respondents", "median_mhq": "Median MHQ"},
+                )
+                fig_inc.add_vline(
+                    x=STUDY_MEAN_MHQ,
+                    line_dash="dash",
+                    line_color="#f59e0b",
+                    annotation_text=f"Study Mean ({STUDY_MEAN_MHQ:.1f})",
+                )
+                style_plotly(
+                    fig_inc,
+                    height=400,
+                    margin=dict(l=16, r=16, t=24, b=40),
+                    coloraxis_showscale=False,
+                    yaxis=dict(categoryorder="array", categoryarray=income_df["income_inr"].tolist()[::-1]),
+                )
+                st.plotly_chart(fig_inc, use_container_width=True, config={"displayModeBar": False})
+                st.caption("**How to Explain:** MHQ rises steadily with income to peak at **INR 85L–2.1Cr (108.33)** before dipping to **90.99** above **INR 2.1Cr**—illustrating economic satiation.")
 
 elif active == "model":
     st.subheader("Feature Importance, Model Performance & Statistical Findings")
@@ -1435,44 +1480,46 @@ elif active == "model":
 
     m_col1, m_col2 = st.columns(2)
     with m_col1:
-        imp_df = feat_imp.reset_index()
-        imp_df.columns = ["Feature", "Importance"]
-        fig_imp = px.bar(
-            imp_df.iloc[::-1],
-            x="Importance",
-            y="Feature",
-            orientation="h",
-            color="Importance",
-            color_continuous_scale="Tealgrn",
-            title="Top 10 Predictors of Overall MHQ Score",
-            labels={"Importance": "Importance Score", "Feature": ""},
-        )
-        style_plotly(fig_imp, height=410, coloraxis_showscale=False)
-        st.plotly_chart(fig_imp, use_container_width=True)
+        with st.container(border=True):
+            st.markdown("**Top 10 Predictors of Overall MHQ Score**")
+            imp_df = feat_imp.reset_index()
+            imp_df.columns = ["Feature", "Importance"]
+            fig_imp = px.bar(
+                imp_df.iloc[::-1],
+                x="Importance",
+                y="Feature",
+                orientation="h",
+                color="Importance",
+                color_continuous_scale="Tealgrn",
+                labels={"Importance": "Gini Importance Score", "Feature": ""},
+            )
+            style_plotly(fig_imp, height=380, margin=dict(l=16, r=16, t=20, b=40), coloraxis_showscale=False)
+            st.plotly_chart(fig_imp, use_container_width=True, config={"displayModeBar": False})
 
     with m_col2:
-        perf_df = pd.DataFrame([
-            {"Target": "Social Self Score", "R2": 0.1013, "RMSE": 72.52},
-            {"Target": "Drive & Motivation", "R2": 0.1137, "RMSE": 63.69},
-            {"Target": "Adapt & Resilience", "R2": 0.1281, "RMSE": 61.59},
-            {"Target": "Overall MHQ Score", "R2": 0.1348, "RMSE": 67.24},
-            {"Target": "Cognition Score", "R2": 0.1356, "RMSE": 63.40},
-        ])
-        fig_perf = px.bar(
-            perf_df,
-            x="R2",
-            y="Target",
-            orientation="h",
-            text="R2",
-            color="R2",
-            color_continuous_scale="Teal",
-            hover_data={"RMSE": ":.2f", "R2": ":.4f"},
-            title="Model Predictability (R²) by Target",
-            labels={"R2": "R-squared (Variance Explained)", "Target": ""},
-        )
-        fig_perf.update_traces(texttemplate="%{text:.4f}", textposition="outside")
-        style_plotly(fig_perf, height=410, coloraxis_showscale=False, xaxis=dict(range=[0, 0.165]))
-        st.plotly_chart(fig_perf, use_container_width=True)
+        with st.container(border=True):
+            st.markdown("**Model Predictability (`R²`) by Target**")
+            perf_df = pd.DataFrame([
+                {"Target": "Social Self Score", "R2": 0.1013, "RMSE": 72.52},
+                {"Target": "Drive & Motivation", "R2": 0.1137, "RMSE": 63.69},
+                {"Target": "Adapt & Resilience", "R2": 0.1281, "RMSE": 61.59},
+                {"Target": "Overall MHQ Score", "R2": 0.1348, "RMSE": 67.24},
+                {"Target": "Cognition Score", "R2": 0.1356, "RMSE": 63.40},
+            ])
+            fig_perf = px.bar(
+                perf_df,
+                x="R2",
+                y="Target",
+                orientation="h",
+                text="R2",
+                color="R2",
+                color_continuous_scale="Teal",
+                hover_data={"RMSE": ":.2f", "R2": ":.4f"},
+                labels={"R2": "R-squared (Variance Explained)", "Target": ""},
+            )
+            fig_perf.update_traces(texttemplate="%{text:.4f}", textposition="outside")
+            style_plotly(fig_perf, height=380, margin=dict(l=16, r=16, t=20, b=40), coloraxis_showscale=False, xaxis=dict(range=[0, 0.165]))
+            st.plotly_chart(fig_perf, use_container_width=True, config={"displayModeBar": False})
 
     with st.container(border=True):
         st.markdown(
@@ -1533,13 +1580,25 @@ elif active == "paper":
             preset_q = "What drives the remaining 86.5% of MHQ variance?"
         if q_c4.button("Loneliness Inventory (LI)?", use_container_width=True):
             preset_q = "How does the Loneliness Inventory (LI) cross-scale permutation validation address the Social Self paradox in medical cohorts?"
-        custom_q = st.text_input("Or type any question about the study:", placeholder="e.g., How does household income affect MHQ scores?")
-        active_q = preset_q or (custom_q.strip() if custom_q and custom_q.strip() else None)
+        custom_q = st.text_input("Or type any question about the study:", placeholder="e.g., How does the Random Forest pipeline prevent data leakage?")
+        if preset_q:
+            st.session_state["viva_last_q"] = preset_q
+        elif custom_q and custom_q.strip() and st.session_state.get("viva_last_custom") != custom_q.strip():
+            st.session_state["viva_last_custom"] = custom_q.strip()
+            st.session_state["viva_last_q"] = custom_q.strip()
+        elif not custom_q or not custom_q.strip():
+            st.session_state["viva_last_custom"] = ""
+
+        active_q = st.session_state.get("viva_last_q")
         if active_q:
-            with st.spinner("Searching verified MHQ study findings..."):
-                ans_text, used_live = ask_research_paper_ai(active_q)
+            if st.session_state.get("viva_cached_q") != active_q:
+                with st.spinner("Searching verified MHQ study findings..."):
+                    ans_text, used_live = ask_research_paper_ai(active_q)
+                st.session_state["viva_cached_q"] = active_q
+                st.session_state["viva_cached_ans"] = (ans_text, used_live)
+            ans_text, used_live = st.session_state["viva_cached_ans"]
             badge_q = "Live Gemini Grounded Answer" if used_live else "Verified Study Knowledge Base"
-            st.info(f"**{badge_q}**\n\n{ans_text}")
+            st.info(f"**{badge_q}** · *{active_q}*\n\n{ans_text}")
 
     with st.expander("Future Scope: Medical College Loneliness Inventory (LI) Cross-Validation", expanded=False):
         st.markdown(
@@ -1592,10 +1651,10 @@ This study evaluates whether **age**, **biological sex**, and **household income
         ("pipeline_architecture.png", "Figure 1: End-to-End MHQ Research & Deployment Architecture"),
         ("mhq_by_age_distribution.png", "Figure 2: Average Overall MHQ Score Across Age Groups"),
         ("mhq_by_income_inr.png", "Figure 3: Mean Overall MHQ Score by Household Income (INR)"),
-        ("subscore_by_age_and_sex.png", "Figure 4: Mean Overall MHQ Score by Biological Sex & Sub-Score Trajectories Across Age"),
+        ("subscore_predictability.png", "Figure 4: Model Predictability (R²) Across Overall MHQ and Domain Sub-Scores"),
         ("feature_importance.png", "Figure 5: Top 10 Demographic Predictors (INR Normalized)"),
-        ("subscore_predictability.png", "Figure 6: Model Predictability (R²) Across Overall MHQ and Domain Sub-Scores"),
-        ("mhq_direct_indirect_relations.png", "Figure 7: Direct Pearson Correlations (r) & Indirect Lifestyle / Socioeconomic MHQ Score Gaps"),
+        ("mhq_direct_indirect_relations.png", "Figure 6: Direct Pearson Correlations (r) & Indirect Lifestyle / Socioeconomic MHQ Score Gaps"),
+        ("subscore_by_age_and_sex.png", "Figure 7: Mean Overall MHQ Score by Biological Sex & Sub-Score Trajectories Across Age"),
     ]
     for idx in range(0, len(paper_figures) - 1, 2):
         fig_c1, fig_c2 = st.columns(2)
@@ -1608,8 +1667,12 @@ This study evaluates whether **age**, **biological sex**, and **household income
     if os.path.exists(last_p):
         st.image(last_p, caption=last_cap, use_container_width=True)
 
-# Full-Page Swarm Rebuild Animation + Interactive Cursor Swarm Engine
+# Optional Page Rebuild Overlay (only mounts DOM cleanup if previously toggled on)
+if "swarm_was_active" not in st.session_state:
+    st.session_state.swarm_was_active = False
+
 if enable_swarm:
+    st.session_state.swarm_was_active = True
     components.html(
         f"""
         <!-- nonce: {st.session_state.rebuild_nonce}_{active} -->
@@ -1755,7 +1818,8 @@ if enable_swarm:
         height=0,
         width=0,
     )
-else:
+elif st.session_state.swarm_was_active:
+    st.session_state.swarm_was_active = False
     components.html(
         """
         <script>
