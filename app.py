@@ -965,22 +965,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Always-visible horizontal workspace switcher (synced with Sidebar)
-top_cols = st.columns(len(NAV_ITEMS))
-for col_nav, (nav_label, nav_key) in zip(top_cols, NAV_ITEMS):
-    with col_nav:
-        if st.button(
-            nav_label,
-            key=f"top_nav_{nav_key}",
-            type="primary" if st.session_state.active_page == nav_key else "secondary",
-            use_container_width=True,
-        ):
-            st.session_state.active_page = nav_key
-            st.session_state.rebuild_nonce += 1
-            st.rerun()
-
-st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
-
 active = st.session_state.active_page
 
 def render_prediction_results(selected_age: str, selected_sex: str, selected_income: str, key_prefix: str = "pred"):
