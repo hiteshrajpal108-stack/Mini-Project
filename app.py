@@ -45,10 +45,18 @@ st.markdown(
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
 
-    /* Clean Streamlit chrome while keeping sidebar expand/collapse accessible */
-    #MainMenu, footer, [data-testid="stToolbar"] { visibility: hidden !important; }
+    /* Clean Streamlit chrome while keeping sidebar expand/collapse button visible */
+    #MainMenu, footer, [data-testid="stToolbarActions"], [data-testid="stMainMenu"] {
+        display: none !important;
+    }
     header[data-testid="stHeader"] {
         background: transparent !important;
+    }
+    [data-testid="stExpandSidebarButton"],
+    [data-testid="stSidebarCollapsedControl"] {
+        visibility: visible !important;
+        display: inline-flex !important;
+        color: #5eead4 !important;
     }
 
     html, .stApp, section.main {
@@ -926,7 +934,7 @@ st.markdown(
     """
     <div class="hero-banner">
         <div class="hero-eyebrow"><span class="hero-dot"></span>Empirical Study · Global Mind Dataset (N = 240,012)</div>
-        <h1 class="hero-title"><span class="hero-gradient">Mental Health Quotient (MHQ) Explorer</span></h1>
+        <div class="hero-title"><span class="hero-gradient">Mental Health Quotient (MHQ) Explorer</span></div>
         <p class="hero-subtitle">
             Demographic predictability modeling (Random Forest, R² = 0.1348) and behavioral mediation analysis across 207 variables, paired with a Loneliness Inventory (LI) cross-validation protocol.
         </p>
@@ -956,6 +964,22 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+# Always-visible horizontal workspace switcher (synced with Sidebar)
+top_cols = st.columns(len(NAV_ITEMS))
+for col_nav, (nav_label, nav_key) in zip(top_cols, NAV_ITEMS):
+    with col_nav:
+        if st.button(
+            nav_label,
+            key=f"top_nav_{nav_key}",
+            type="primary" if st.session_state.active_page == nav_key else "secondary",
+            use_container_width=True,
+        ):
+            st.session_state.active_page = nav_key
+            st.session_state.rebuild_nonce += 1
+            st.rerun()
+
+st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
 
 active = st.session_state.active_page
 
