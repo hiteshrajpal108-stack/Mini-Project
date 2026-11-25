@@ -972,39 +972,66 @@ def render_prediction_results(selected_age: str, selected_sex: str, selected_inc
     g_col, a_col = st.columns([1.45, 1.15])
 
     with g_col:
-        fig_bullet = go.Figure(
-            go.Indicator(
-                mode="gauge+number+delta",
-                value=pred,
-                delta={"reference": STUDY_MEAN_MHQ, "valueformat": ".1f"},
-                number={"valueformat": ".1f", "font": {"size": 40, "color": "#f8fafc", "family": "JetBrains Mono, monospace"}},
-                title={"text": f"MHQ Continuum (−100 to +200) · Mean {STUDY_MEAN_MHQ:.2f} / Med {STUDY_MEDIAN_MHQ:.1f}", "font": {"size": 13, "color": "#94a3b8"}},
-                gauge={
-                    "shape": "bullet",
-                    "axis": {"range": [-100, 200], "tickcolor": "#94a3b8", "tickvals": [-100, -50, 0, 50, 67.65, 77.6, 100, 200], "ticktext": ["-100", "-50", "0", "50", "Mean", "Med", "100", "200"]},
-                    "bar": {"color": "#2dd4bf", "thickness": 0.42},
-                    "bgcolor": "rgba(255,255,255,0.03)",
-                    "steps": [
-                        {"range": [-100, -50], "color": "rgba(239,68,68,0.35)"},
-                        {"range": [-50, 0], "color": "rgba(249,115,22,0.35)"},
-                        {"range": [0, 50], "color": "rgba(234,179,8,0.32)"},
-                        {"range": [50, 100], "color": "rgba(34,197,94,0.32)"},
-                        {"range": [100, 200], "color": "rgba(20,184,166,0.35)"},
-                    ],
-                    "threshold": {
-                        "line": {"color": "#f59e0b", "width": 3},
-                        "thickness": 0.85,
-                        "value": STUDY_MEAN_MHQ,
-                    },
-                },
-            )
-        )
-        style_plotly(fig_bullet, height=220, margin=dict(l=24, r=24, t=58, b=32))
-        st.plotly_chart(fig_bullet, use_container_width=True)
-        st.caption(
-            f"Population benchmarks (`Full_Statistics.csv`, N = 240,012): **Study Mean = {STUDY_MEAN_MHQ:.2f}** (amber marker) · "
-            f"**Study Median = {STUDY_MEDIAN_MHQ:.1f}** · Your profile delta vs. Median: **{delta_med:+.2f} pts**."
-        )
+        with st.container(border=True):
+            if bins_df is not None and not bins_df.empty:
+                dist_df = bins_df.groupby("bin_center", as_index=False)["count"].sum().sort_values("bin_center")
+                fig_pos = go.Figure()
+                fig_pos.add_trace(
+                    go.Scatter(
+                        x=dist_df["bin_center"],
+                        y=dist_df["count"],
+                        mode="lines",
+                        fill="tozeroy",
+                        line=dict(color="#14b8a6", width=2.2),
+                        fillcolor="rgba(20, 184, 166, 0.16)",
+                        name="Population (N=240,012)",
+                        hovertemplate="MHQ Score: %{x:.0f}<br>Respondents: %{y:,}<extra></extra>",
+                    )
+                )
+                max_y = float(dist_df["count"].max()) if not dist_df.empty else 1000.0
+                for label_txt, x_val, col_hex, dash_style in [
+                    (f"Your Prediction ({pred:.1f})", pred, "#2dd4bf", "solid"),
+                    (f"Study Mean ({STUDY_MEAN_MHQ:.2f})", STUDY_MEAN_MHQ, "#f59e0b", "dash"),
+                    (f"Study Median ({STUDY_MEDIAN_MHQ:.1f})", STUDY_MEDIAN_MHQ, "#818cf8", "dot"),
+                ]:
+                    fig_pos.add_trace(
+                        go.Scatter(
+                            x=[x_val, x_val],
+                            y=[0, max_y * 1.05],
+                            mode="lines",
+                            line=dict(color=col_hex, width=2.5 if dash_style == "solid" else 2, dash=dash_style),
+                            name=label_txt,
+                            hovertemplate=f"{label_txt}<extra></extra>",
+                        )
+                    )
+                style_plotly(
+                    fig_pos,
+                    height=300,
+                    margin=dict(l=16, r=16, t=42, b=16),
+                    title=dict(text="Position in Population MHQ Distribution (N = 240,012)", font=dict(size=14, color="#e2e8f0")),
+                    xaxis=dict(range=[-100, 200], tickvals=[-100, -50, 0, 50, 100, 150, 200], title="MHQ Score (−100 to +200)"),
+                    yaxis=dict(title="Respondents", showticklabels=True),
+                    legend=dict(orientation="h", yanchor="bottom", y=-0.34, xanchor="center", x=0.5, font=dict(size=11)),
+                    hovermode="x unified",
+                )
+                st.plotly_chart(fig_pos, use_container_width=True)
+            else:
+                fig_gauge = go.Figure(
+                    go.Indicator(
+                        mode="gauge+number",
+                        value=pred,
+                        number={"valueformat": ".1f", "font": {"size": 38, "color": "#f8fafc", "family": "JetBrains Mono, monospace"}},
+                        title={"text": f"MHQ Scale Position · {tier}", "font": {"size": 14, "color": "#e2e8f0"}},
+                        gauge={
+                            "axis": {"range": [-100, 200], "tickvals": [-100, -50, 0, 50, 100, 150, 200], "tickcolor": "#94a3b8"},
+                            "bar": {"color": "#2dd4bf", "thickness": 0.3},
+                            "bgcolor": "rgba(255,255,255,0.03)",
+                            "threshold": {"line": {"color": "#f59e0b", "width": 3}, "thickness": 0.85, "value": STUDY_MEAN_MHQ},
+                        },
+                    )
+                )
+                style_plotly(fig_gauge, height=280, margin=dict(l=24, r=24, t=48, b=24))
+                st.plotly_chart(fig_gauge, use_container_width=True)
 
     with a_col:
         if pred >= 100:
@@ -1038,21 +1065,70 @@ def render_prediction_results(selected_age: str, selected_sex: str, selected_inc
         )
 
     st.markdown("<div class='section-spacer'></div>", unsafe_allow_html=True)
-    if st.button("Generate Evidence-Based Well-Being Guidance", type="primary", key=f"ai_btn_{key_prefix}_{selected_age}_{selected_sex}_{selected_income}"):
-        with st.spinner("Synthesizing tier-specific guidance and research sources..."):
-            advice_text, badge_label, source_links, google_search_url = get_ai_wellbeing_advice(
-                selected_age, selected_sex, selected_income, pred, tier
+    tab_traj, tab_guide = st.tabs(["Life-Course Age Trajectory", "Evidence-Based Well-Being Guidance"])
+
+    with tab_traj:
+        traj_scores = [predict_mhq(model, age_lbl, selected_sex, selected_income) for age_lbl in AGE_ORDER]
+        traj_df = pd.DataFrame({"Age Bracket": AGE_ORDER, "Predicted MHQ": traj_scores})
+        fig_traj = go.Figure()
+        fig_traj.add_trace(
+            go.Scatter(
+                x=traj_df["Age Bracket"],
+                y=traj_df["Predicted MHQ"],
+                mode="lines+markers",
+                line=dict(color="#38bdf8", width=2.5),
+                marker=dict(size=7, color="#38bdf8"),
+                name=f"Trajectory ({selected_sex}, {selected_income})",
+                hovertemplate="Age %{x}<br>Predicted MHQ: %{y:.2f}<extra></extra>",
             )
-        with st.container(border=True):
-            st.markdown(f'<div class="ai-badge">{badge_label}</div>', unsafe_allow_html=True)
-            st.markdown(advice_text)
-            if source_links:
-                links_md = " · ".join(f"[{t}]({u})" for t, u in source_links)
-                st.caption(f"**References:** {links_md}")
-            st.link_button(
-                f"Search Peer-Reviewed Literature for {tier} Tier (Age {selected_age})",
-                google_search_url,
+        )
+        fig_traj.add_trace(
+            go.Scatter(
+                x=[selected_age],
+                y=[pred],
+                mode="markers",
+                marker=dict(size=14, color="#2dd4bf", line=dict(color="#ffffff", width=2)),
+                name=f"Selected Age ({selected_age}: {pred:.2f})",
+                hovertemplate=f"Selected ({selected_age}): {pred:.2f}<extra></extra>",
             )
+        )
+        fig_traj.add_hline(
+            y=STUDY_MEAN_MHQ,
+            line_dash="dash",
+            line_color="#f59e0b",
+            annotation_text=f"Study Mean ({STUDY_MEAN_MHQ:.2f})",
+            annotation_position="bottom right",
+        )
+        y_min = min(-10.0, min(traj_scores) - 15.0)
+        y_max = max(125.0, max(traj_scores) + 15.0)
+        style_plotly(
+            fig_traj,
+            height=290,
+            margin=dict(l=20, r=20, t=42, b=20),
+            title=dict(text=f"Predicted MHQ Across Life Course ({selected_sex} · {selected_income})", font=dict(size=14, color="#e2e8f0")),
+            xaxis=dict(title="Age Cohort"),
+            yaxis=dict(title="Predicted MHQ", range=[y_min, y_max]),
+            legend=dict(orientation="h", yanchor="bottom", y=-0.34, xanchor="center", x=0.5, font=dict(size=11)),
+            hovermode="x unified",
+        )
+        st.plotly_chart(fig_traj, use_container_width=True)
+
+    with tab_guide:
+        if st.button("Generate Evidence-Based Well-Being Guidance", type="primary", key=f"ai_btn_{key_prefix}_{selected_age}_{selected_sex}_{selected_income}"):
+            with st.spinner("Synthesizing tier-specific guidance and research sources..."):
+                advice_text, badge_label, source_links, google_search_url = get_ai_wellbeing_advice(
+                    selected_age, selected_sex, selected_income, pred, tier
+                )
+            with st.container(border=True):
+                st.markdown(f'<div class="ai-badge">{badge_label}</div>', unsafe_allow_html=True)
+                st.markdown(advice_text)
+                if source_links:
+                    links_md = " · ".join(f"[{t}]({u})" for t, u in source_links)
+                    st.caption(f"**References:** {links_md}")
+                st.link_button(
+                    f"Search Peer-Reviewed Literature for {tier} Tier (Age {selected_age})",
+                    google_search_url,
+                )
 
 
 if active == "prediction":
